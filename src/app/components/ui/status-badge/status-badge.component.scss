@@ -1,0 +1,38 @@
+:host {
+  display: inline-flex;
+}
+
+.badge-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 9px 2px 7px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+  background: var(--color-surface-hover);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+[data-tone='success'] {
+  color: var(--color-success);
+  background: var(--color-success-soft);
+}
+
+[data-tone='warning'] {
+  color: var(--color-warning);
+  background: var(--color-warning-soft);
+}
+
+[data-tone='danger'] {
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+}

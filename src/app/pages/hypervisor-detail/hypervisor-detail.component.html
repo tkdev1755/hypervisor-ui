@@ -1,0 +1,26 @@
+@if (hypervisor(); as hypervisor) {
+  <app-page backLink="/hypervisors" backLabel="Hyperviseurs" eyebrow="Hyperviseur" [title]="hypervisor.name" [subtitle]="hypervisor.uri">
+    <app-status-badge actions [status]="hypervisor.status" />
+
+    <app-tabs [tabs]="onglets" [(active)]="onglet" />
+
+    <!-- Un seul onglet existe à la fois : il charge ses données à son ouverture. -->
+    @switch (onglet()) {
+      @case ('vms') {
+        <app-vm-list [hypervisorId]="hypervisor.id" [hypervisorName]="hypervisor.name" />
+      }
+      @case ('disks') {
+        <app-disk-list [hypervisorId]="hypervisor.id" />
+      }
+      @case ('networks') {
+        <app-network-list [hypervisorId]="hypervisor.id" />
+      }
+    }
+  </app-page>
+} @else if (error(); as error) {
+  <app-page backLink="/hypervisors" backLabel="Hyperviseurs" title="Hyperviseur">
+    <app-error-panel [error]="error" />
+  </app-page>
+} @else {
+  <app-loading label="Chargement de l'hyperviseur…" />
+}

@@ -1,0 +1,22 @@
+<app-lesson [number]="2" title="Les objets et les tableaux" [code]="code" codeTitle="objets.ts">
+  <app-text>
+    Un <strong>objet</strong> regroupe plusieurs valeurs sous des noms : une VM a un nom, une mémoire, un état. Une
+    <app-inline-code>interface</app-inline-code> décrit la forme que doit avoir cet objet : TypeScript refusera un objet
+    auquel il manque un champ.
+  </app-text>
+  <app-text>
+    Un <strong>tableau</strong> est une liste de valeurs, entre crochets. On s'en sert tout le temps avec trois outils :
+    <app-inline-code>filter</app-inline-code> (garder certains éléments), <app-inline-code>map</app-inline-code>
+    (transformer chacun) et <app-inline-code>reduce</app-inline-code> (tout combiner en une seule valeur).
+  </app-text>
+  <app-callout title="La flèche =>">
+    <app-inline-code>(vm) => vm.allumee</app-inline-code> est une petite fonction : « pour chaque vm, renvoie vm.allumee ».
+    La leçon 3 l'explique en détail.
+  </app-callout>
+
+  <app-list demo>
+    @for (ligne of resultats; track ligne.expression) {
+      <app-list-tile icon="arrow-right" [title]="ligne.expression" [subtitle]="ligne.resultat" />
+    }
+  </app-list>
+</app-lesson>

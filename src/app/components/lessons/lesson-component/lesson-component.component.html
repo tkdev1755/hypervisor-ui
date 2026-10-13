@@ -1,0 +1,25 @@
+<app-lesson [number]="5" title="Un composant" [code]="code" codeTitle="hello-card.component.ts">
+  <app-text>
+    Un écran Angular est un assemblage de <strong>composants</strong> : des morceaux d'interface réutilisables. Chaque
+    composant tient dans un dossier de trois fichiers :
+  </app-text>
+  <app-text>
+    • <app-inline-code>.ts</app-inline-code> : la classe, avec les données et les actions ;<br />
+    • <app-inline-code>.html</app-inline-code> : ce qui s'affiche ;<br />
+    • <app-inline-code>.scss</app-inline-code> : l'apparence (chez nous, presque toujours vide).
+  </app-text>
+  <app-text>
+    Le décorateur <app-inline-code>&#64;Component</app-inline-code> relie les trois. Son
+    <app-inline-code>selector</app-inline-code> est la balise qui affiche le composant, et sa liste
+    <app-inline-code>imports</app-inline-code> déclare les autres composants utilisés dans son HTML.
+  </app-text>
+  <app-callout type="tip" title="Créer un composant">
+    La commande <app-inline-code>npx ng generate component components/mon-composant</app-inline-code> crée le dossier et
+    les trois fichiers d'un coup.
+  </app-callout>
+
+  <app-column demo [gap]="8">
+    <app-hello-card />
+    <app-hello-card />
+  </app-column>
+</app-lesson>

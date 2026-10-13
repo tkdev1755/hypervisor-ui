@@ -1,0 +1,28 @@
+<app-page
+  eyebrow="Formation"
+  title="Apprendre TypeScript et Angular"
+  subtitle="Chaque leçon montre le code à gauche et son résultat en direct à droite. Suivez-les dans l'ordre : chacune s'appuie sur la précédente."
+>
+  <app-tabs [tabs]="parties" [(active)]="partie" />
+
+  <app-column [gap]="20">
+    @switch (partie()) {
+      @case ('typescript') {
+        <app-lesson-variables />
+        <app-lesson-objects />
+        <app-lesson-functions />
+        <app-lesson-classes />
+      }
+      @case ('angular') {
+        <app-lesson-component />
+        <app-lesson-signals />
+        <app-lesson-control-flow />
+        <app-lesson-inputs-outputs />
+        <app-lesson-services />
+      }
+      @case ('layout') {
+        <app-lesson-layout />
+      }
+    }
+  </app-column>
+</app-page>

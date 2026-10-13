@@ -1,0 +1,27 @@
+<app-lesson [number]="6" title="Afficher des données et réagir aux clics" [code]="code" codeTitle="compteur.component.ts / .html">
+  <app-text>Trois écritures suffisent pour relier le HTML à la classe :</app-text>
+  <app-text>
+    • <app-inline-code>{{ accolades }}</app-inline-code> affiche une valeur ;<br />
+    • <app-inline-code>(pressed)="methode()"</app-inline-code> appelle une méthode quand on clique ;<br />
+    • <app-inline-code>[propriete]="valeur"</app-inline-code> passe une valeur à un composant.
+  </app-text>
+  <app-text>
+    Un <strong>signal</strong> contient une valeur qui peut changer. Quand elle change, Angular met à jour l'écran tout
+    seul. On le lit en l'appelant avec des parenthèses (<app-inline-code>compteur()</app-inline-code>), et on le modifie
+    avec <app-inline-code>set</app-inline-code> ou <app-inline-code>update</app-inline-code>. Un
+    <app-inline-code>computed</app-inline-code> est une valeur calculée à partir d'autres signals.
+  </app-text>
+  <app-callout type="warning" title="L'oubli le plus fréquent">
+    Écrire <app-inline-code>compteur</app-inline-code> au lieu de <app-inline-code>compteur()</app-inline-code> : sans les
+    parenthèses, on n'obtient pas la valeur.
+  </app-callout>
+
+  <app-column demo [gap]="12">
+    <app-text variant="title">Compteur : {{ compteur() }}</app-text>
+    <app-text color="muted">Double : {{ double() }}</app-text>
+    <app-row [gap]="8">
+      <app-button size="sm" icon="plus" (pressed)="ajouter()">+1</app-button>
+      <app-button variant="ghost" size="sm" [disabled]="compteur() === 0" (pressed)="remettreAZero()">Remettre à zéro</app-button>
+    </app-row>
+  </app-column>
+</app-lesson>

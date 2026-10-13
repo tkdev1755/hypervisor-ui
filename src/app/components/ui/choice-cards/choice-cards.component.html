@@ -1,0 +1,19 @@
+<div class="choices" role="radiogroup" [attr.aria-label]="label()" [style.--columns]="columns()">
+  @for (option of options(); track option.value; let i = $index) {
+    <button
+      type="button"
+      role="radio"
+      class="choice"
+      [class.is-selected]="option.value === value()"
+      [attr.aria-checked]="option.value === value()"
+      [attr.tabindex]="option.value === value() || (value() === undefined && i === 0) ? 0 : -1"
+      (click)="select(option.value)"
+      (keydown)="onKeydown($event, i)"
+    >
+      <span class="label">{{ option.label }}</span>
+      @if (option.description) {
+        <span class="description">{{ option.description }}</span>
+      }
+    </button>
+  }
+</div>

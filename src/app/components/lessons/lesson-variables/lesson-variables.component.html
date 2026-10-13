@@ -1,0 +1,28 @@
+<app-lesson [number]="1" title="Les variables et les types" [code]="code" codeTitle="variables.ts">
+  <app-text>
+    Une variable est une boîte qui porte un nom et contient une valeur. On la crée avec
+    <app-inline-code>let</app-inline-code> si sa valeur peut changer, ou avec <app-inline-code>const</app-inline-code> si elle
+    ne changera plus.
+  </app-text>
+  <app-text>
+    TypeScript, c'est du JavaScript avec des <strong>types</strong> : on précise ce que contient chaque variable. Les trois
+    types de base sont <app-inline-code>string</app-inline-code> (du texte, entre apostrophes),
+    <app-inline-code>number</app-inline-code> (un nombre) et <app-inline-code>boolean</app-inline-code> (vrai ou faux :
+    <app-inline-code>true</app-inline-code> / <app-inline-code>false</app-inline-code>).
+  </app-text>
+  <app-callout type="tip" title="Pourquoi des types ?">
+    TypeScript vérifie le code avant même de le lancer : si vous mettez du texte là où un nombre est attendu, l'erreur est
+    soulignée en rouge dans l'éditeur. Dans VS Code, survolez une variable pour voir son type.
+  </app-callout>
+
+  <app-column demo [gap]="12">
+    <app-list>
+      <app-list-tile icon="code" title="nom" [subtitle]="'string — ' + nom" />
+      <app-list-tile icon="code" title="memoireGo" [subtitle]="'number — ' + memoireGo" />
+      <app-list-tile icon="code" title="allumee" [subtitle]="'boolean — ' + allumee" />
+    </app-list>
+    <app-row>
+      <app-button variant="secondary" size="sm" (pressed)="changerNom()">Changer la valeur de nom</app-button>
+    </app-row>
+  </app-column>
+</app-lesson>

@@ -1,0 +1,80 @@
+// =============================================================================
+// Design tokens : la source unique des couleurs, espacements, rayons et ombres.
+//
+// Règle d'or : dans les composants, on n'écrit jamais une couleur « en dur »
+// (#3355dd, rgb(...)). On utilise une variable : var(--color-accent), etc.
+// Changer une valeur ici change toute l'application.
+// =============================================================================
+
+// --- Valeurs Sass (utilisées aussi pour configurer Bootstrap) ----------------
+$accent: #2f5bd3;
+$success: #1f8a4c;
+$warning: #b7791f;
+$danger: #c4362f;
+
+$gray-25: #fbfbfc;
+$gray-50: #f6f7f9;
+$gray-100: #eef0f3;
+$gray-200: #e3e6eb;
+$gray-300: #cfd4dc;
+$gray-500: #8a919e;
+$gray-600: #646b78;
+$gray-800: #2a2f38;
+$gray-900: #161a20;
+
+$font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI', Inter, Roboto,
+  'Helvetica Neue', Arial, sans-serif;
+$font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+
+$radius-sm: 6px;
+$radius: 10px;
+$radius-lg: 14px;
+
+// --- Variables CSS (utilisées dans les composants) ---------------------------
+:root {
+  // Surfaces
+  --color-bg: #{$gray-50};
+  --color-surface: #ffffff;
+  --color-surface-muted: #{$gray-25};
+  --color-surface-hover: #{$gray-100};
+  --color-border: #{$gray-200};
+  --color-border-strong: #{$gray-300};
+
+  // Texte
+  --color-text: #{$gray-900};
+  --color-text-muted: #{$gray-600};
+  --color-text-subtle: #{$gray-500};
+
+  // Couleurs de sens (une seule couleur d'accent : la sobriété fait le design)
+  --color-accent: #{$accent};
+  --color-accent-soft: #{rgba($accent, 0.09)};
+  --color-success: #{$success};
+  --color-success-soft: #{rgba($success, 0.1)};
+  --color-warning: #{$warning};
+  --color-warning-soft: #{rgba($warning, 0.12)};
+  --color-danger: #{$danger};
+  --color-danger-soft: #{rgba($danger, 0.09)};
+
+  // Espacements : une échelle de 4 px, rien en dehors
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  // Rayons, ombres, mouvements
+  --radius-sm: #{$radius-sm};
+  --radius: #{$radius};
+  --radius-lg: #{$radius-lg};
+  --shadow-sm: 0 1px 2px rgba(22, 26, 32, 0.05);
+  --shadow: 0 1px 2px rgba(22, 26, 32, 0.04), 0 4px 16px rgba(22, 26, 32, 0.06);
+  --shadow-lg: 0 12px 40px rgba(22, 26, 32, 0.16);
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --duration: 180ms;
+
+  // Typographie
+  --font-sans: #{$font-sans};
+  --font-mono: #{$font-mono};
+}

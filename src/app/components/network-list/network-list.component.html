@@ -1,0 +1,13 @@
+@if (loading()) {
+  <app-loading label="Chargement des réseaux…" />
+} @else if (error(); as error) {
+  <app-error-panel [error]="error" [retryable]="true" (retry)="load()" />
+} @else {
+  <app-grid [minItemWidth]="240">
+    @for (network of networks(); track network.id) {
+      <app-resource-card icon="network" [title]="network.name" [subtitle]="network.bridge ?? 'sans bridge'" [status]="network.status" />
+    } @empty {
+      <app-empty-state icon="network" title="Aucun réseau" message="Aucun réseau virtuel n'est déclaré sur cet hyperviseur." />
+    }
+  </app-grid>
+}

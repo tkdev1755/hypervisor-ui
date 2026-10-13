@@ -1,0 +1,30 @@
+<app-lesson [number]="9" title="Les services et les appels à l'API" [code]="code" codeTitle="service + composant">
+  <app-text>
+    Un <strong>service</strong> est une classe partagée par toute l'application. Chez nous, chaque service regroupe les
+    appels d'une partie de l'API (dossier <app-inline-code>services/</app-inline-code>). Un composant obtient un service en
+    écrivant <app-inline-code>inject(HypervisorService)</app-inline-code> : c'est l'<strong>injection</strong>.
+  </app-text>
+  <app-text>
+    Un appel HTTP prend du temps : il renvoie un <strong>Observable</strong>, une réponse qui arrivera plus tard. Avec
+    <app-inline-code>.subscribe()</app-inline-code>, on dit quoi faire quand elle arrive (<app-inline-code>next</app-inline-code>)
+    ou si elle échoue (<app-inline-code>error</app-inline-code>).
+  </app-text>
+  <app-callout type="warning" title="Sans subscribe, rien ne se passe">
+    Tant que personne n'appelle <app-inline-code>.subscribe()</app-inline-code>, la requête ne part pas.
+  </app-callout>
+  <app-callout title="Essayez">
+    Cliquez avec l'API arrêtée, puis démarrée (<app-inline-code>npm run mock</app-inline-code>) : vous verrez les deux cas.
+  </app-callout>
+
+  <app-column demo [gap]="12">
+    <app-row>
+      <app-button icon="activity" size="sm" [loading]="chargement()" (pressed)="appeler()">Appeler GET /ping</app-button>
+    </app-row>
+    @if (reponse(); as reponse) {
+      <app-text color="success" variant="code">Réponse : status = "{{ reponse.status }}", content = "{{ reponse.content }}"</app-text>
+    }
+    @if (erreur(); as erreur) {
+      <app-error-panel [error]="erreur" />
+    }
+  </app-column>
+</app-lesson>

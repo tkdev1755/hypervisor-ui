@@ -1,0 +1,5 @@
+// Point d'entrée des styles globaux. L'ordre compte :
+// 1. les tokens (variables), 2. Bootstrap configuré, 3. nos règles de base.
+@import 'tokens';
+@import 'bootstrap';
+@import 'base';

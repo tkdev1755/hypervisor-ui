@@ -1,0 +1,37 @@
+:host {
+  display: block;
+  grid-column: 1 / -1; // dans une <app-grid>, prend toute la largeur
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--space-7) var(--space-5);
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius);
+}
+
+.icon-wrap {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: var(--space-3);
+  border-radius: 50%;
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.title {
+  font-weight: 600;
+  margin-bottom: var(--space-1);
+}
+
+.message {
+  max-width: 44ch;
+  margin: 0 0 var(--space-3);
+  color: var(--color-text-muted);
+}

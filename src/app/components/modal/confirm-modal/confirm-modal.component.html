@@ -1,0 +1,15 @@
+<app-modal-shell
+  [title]="title()"
+  [state]="state()"
+  [error]="error()"
+  [successMessage]="successMessage()"
+  (retry)="state.set('form')"
+  (done)="modalRef.close(true)"
+>
+  <app-text color="muted">{{ message() }}</app-text>
+
+  <app-row footer [gap]="8">
+    <app-button variant="ghost" (pressed)="modalRef.close(false)">Annuler</app-button>
+    <app-button [variant]="danger() ? 'danger' : 'primary'" (pressed)="confirm()">{{ confirmLabel() }}</app-button>
+  </app-row>
+</app-modal-shell>

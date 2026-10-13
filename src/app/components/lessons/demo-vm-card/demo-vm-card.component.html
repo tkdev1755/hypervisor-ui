@@ -1,0 +1,11 @@
+<app-card [padding]="12">
+  <app-row [gap]="12">
+    <app-icon name="cpu" />
+    <app-text variant="code">{{ vm().nom }}</app-text>
+    <app-status-badge [status]="vm().allumee ? 'running' : 'stopped'" />
+    <app-spacer />
+    <app-button variant="ghost" size="sm" [icon]="vm().allumee ? 'stop' : 'play'" (pressed)="basculer.emit(vm().nom)">
+      {{ vm().allumee ? 'Éteindre' : 'Allumer' }}
+    </app-button>
+  </app-row>
+</app-card>

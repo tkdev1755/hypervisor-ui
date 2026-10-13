@@ -1,0 +1,39 @@
+@let e = error();
+<div class="panel" [attr.data-kind]="e.kind" role="alert">
+  <app-icon class="lead-icon" [name]="e.kind === 'technical' ? 'alert' : 'info'" [size]="18" />
+  <div class="content">
+    <div class="title">{{ e.title }}</div>
+    <div class="message">{{ e.message }}</div>
+
+    <div class="actions">
+      @if (retryable()) {
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="retry.emit()">
+          <app-icon name="refresh" [size]="14" /> Réessayer
+        </button>
+      }
+      @if (e.kind === 'technical') {
+        <button type="button" class="btn btn-sm btn-ghost" (click)="detailsOpen.set(!detailsOpen())">
+          <app-icon [name]="detailsOpen() ? 'chevron-down' : 'chevron-right'" [size]="14" />
+          Détails techniques
+        </button>
+      }
+    </div>
+
+    @if (e.kind === 'technical' && detailsOpen()) {
+      <dl class="details">
+        <dt>API</dt>
+        <dd>{{ e.api }}</dd>
+        <dt>Requête</dt>
+        <dd><code>{{ e.method }} {{ e.endpoint }}</code></dd>
+        <dt>Code HTTP</dt>
+        <dd>{{ e.status === 0 ? 'aucune réponse' : e.status }}</dd>
+        <dt>Heure</dt>
+        <dd>{{ e.occurredAt | date: 'HH:mm:ss' }}</dd>
+        @if (e.detail) {
+          <dt>Réponse</dt>
+          <dd><code>{{ e.detail }}</code></dd>
+        }
+      </dl>
+    }
+  </div>
+</div>

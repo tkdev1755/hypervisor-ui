@@ -1,0 +1,7 @@
+<app-icon class="icon" [name]="icon()" [size]="18" />
+<div class="content">
+  @if (title()) {
+    <div class="title">{{ title() }}</div>
+  }
+  <ng-content />
+</div>

@@ -1,0 +1,24 @@
+<app-lesson [number]="3" title="Les fonctions" [code]="code" codeTitle="fonctions.ts">
+  <app-text>
+    Une <strong>fonction</strong> est une suite d'instructions qui porte un nom. Elle reçoit des
+    <strong>paramètres</strong> (entre parenthèses, chacun avec son type) et <strong>renvoie</strong> un résultat avec
+    <app-inline-code>return</app-inline-code>. Le type après les parenthèses est celui du résultat.
+  </app-text>
+  <app-text>
+    Un <strong>type union</strong> (<app-inline-code>'allumee' | 'eteinte'</app-inline-code>) limite les valeurs
+    possibles : une faute de frappe devient une erreur détectée tout de suite.
+  </app-text>
+
+  <app-column demo [gap]="12">
+    <app-text variant="code">enGo({{ memoireMo }}) = {{ enGo(memoireMo) }}</app-text>
+    <app-row [gap]="8" [wrap]="true">
+      <app-button variant="secondary" size="sm" (pressed)="memoireMo = 1024">1024 Mo</app-button>
+      <app-button variant="secondary" size="sm" (pressed)="memoireMo = 4096">4096 Mo</app-button>
+      <app-button variant="secondary" size="sm" (pressed)="memoireMo = 16384">16384 Mo</app-button>
+    </app-row>
+    <app-text variant="code">libelle('{{ statut }}') = '{{ libelle(statut) }}'</app-text>
+    <app-row>
+      <app-button variant="secondary" size="sm" (pressed)="basculerStatut()">Changer le statut</app-button>
+    </app-row>
+  </app-column>
+</app-lesson>

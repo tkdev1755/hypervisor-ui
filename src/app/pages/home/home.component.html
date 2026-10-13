@@ -1,0 +1,29 @@
+<app-page eyebrow="Bienvenue" title="Hypervisor UI" subtitle="Le front du simili Proxmox : gérer des hyperviseurs KVM, leurs machines virtuelles, disques et réseaux.">
+  <app-grid [minItemWidth]="300">
+    @for (raccourci of raccourcis; track raccourci.lien) {
+      <app-card [padding]="24">
+        <app-column [gap]="12" crossAlign="start">
+          <app-icon [name]="raccourci.icon" [size]="24" />
+          <app-text variant="title">{{ raccourci.titre }}</app-text>
+          <app-text color="muted">{{ raccourci.texte }}</app-text>
+          <app-button [to]="raccourci.lien" icon="arrow-right">{{ raccourci.bouton }}</app-button>
+        </app-column>
+      </app-card>
+    }
+  </app-grid>
+
+  <app-column [gap]="12">
+    <app-text variant="heading">Par où commencer ?</app-text>
+    <app-list>
+      @for (etape of etapes; track etape.titre) {
+        <app-list-tile [title]="etape.titre" [subtitle]="etape.texte" />
+      }
+    </app-list>
+  </app-column>
+
+  <app-callout type="tip" title="Où est le code de cette page ?">
+    Dans <app-inline-code>src/app/pages/home/</app-inline-code> : <app-inline-code>home.component.ts</app-inline-code> (les
+    données), <app-inline-code>home.component.html</app-inline-code> (l'affichage) et
+    <app-inline-code>home.component.scss</app-inline-code> (vide : la mise en page vient des composants).
+  </app-callout>
+</app-page>

@@ -1,0 +1,32 @@
+<app-lesson [number]="7" title="Conditions et boucles" [code]="code" codeTitle="liste.component.ts / .html">
+  <app-text>
+    Dans le HTML, <app-inline-code>&#64;if</app-inline-code> affiche un bloc seulement si une condition est vraie
+    (avec un <app-inline-code>&#64;else</app-inline-code> facultatif), et <app-inline-code>&#64;for</app-inline-code>
+    répète un bloc pour chaque élément d'un tableau. Le bloc <app-inline-code>&#64;empty</app-inline-code> s'affiche
+    quand le tableau est vide.
+  </app-text>
+  <app-callout type="warning" title="Ne modifiez pas un tableau en place">
+    <app-inline-code>vms().push('x')</app-inline-code> ne met pas l'écran à jour. Créez toujours un nouveau tableau :
+    <app-inline-code>vms.update((liste) => [...liste, 'x'])</app-inline-code>.
+  </app-callout>
+
+  <app-column demo [gap]="12">
+    @if (vms().length >= 4) {
+      <app-text color="warning" weight="medium">Beaucoup de VM !</app-text>
+    } @else {
+      <app-text color="muted">{{ vms().length }} VM</app-text>
+    }
+    <app-list>
+      @for (vm of vms(); track vm) {
+        <app-list-tile icon="cpu" [title]="vm" />
+      } @empty {
+        <app-list-tile icon="info" title="Aucune VM." />
+      }
+    </app-list>
+    <app-row [gap]="8">
+      <app-button size="sm" icon="plus" (pressed)="ajouter()">Ajouter</app-button>
+      <app-button variant="secondary" size="sm" icon="minus" (pressed)="retirer()">Retirer</app-button>
+      <app-button variant="ghost" size="sm" (pressed)="vider()">Vider</app-button>
+    </app-row>
+  </app-column>
+</app-lesson>

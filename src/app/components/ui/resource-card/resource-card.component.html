@@ -1,0 +1,16 @@
+<div class="top">
+  <div class="icon-wrap"><app-icon [name]="icon()" [size]="18" /></div>
+  @if (status(); as status) {
+    <app-status-badge [status]="status" />
+  }
+</div>
+<div class="name">{{ title() }}</div>
+@if (subtitle()) {
+  <div class="subtitle">{{ subtitle() }}</div>
+}
+@if (meta()) {
+  <div class="meta">{{ meta() }}</div>
+}
+<div class="actions">
+  <ng-content />
+</div>

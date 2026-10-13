@@ -1,0 +1,26 @@
+<app-column [gap]="24">
+  @if (backLink(); as link) {
+    <app-row>
+      <app-button variant="ghost" size="sm" icon="arrow-left" [to]="link">{{ backLabel() }}</app-button>
+    </app-row>
+  }
+
+  <app-row [gap]="16" crossAlign="end" [wrap]="true">
+    <app-expanded>
+      <app-column [gap]="6">
+        @if (eyebrow()) {
+          <app-text variant="eyebrow">{{ eyebrow() }}</app-text>
+        }
+        <app-text variant="display">{{ title() }}</app-text>
+        @if (subtitle()) {
+          <app-text color="muted">{{ subtitle() }}</app-text>
+        }
+      </app-column>
+    </app-expanded>
+    <app-row [gap]="8">
+      <ng-content select="[actions]" />
+    </app-row>
+  </app-row>
+
+  <ng-content />
+</app-column>

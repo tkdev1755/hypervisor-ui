@@ -1,0 +1,10 @@
+<div class="code-block">
+  <div class="bar">
+    <span>{{ title() }}</span>
+    <button type="button" class="btn btn-sm btn-ghost" (click)="copy()">
+      <app-icon [name]="copied() ? 'check' : 'copy'" [size]="14" />
+      {{ copied() ? 'Copié' : 'Copier' }}
+    </button>
+  </div>
+  <pre><code>{{ code() }}</code></pre>
+</div>

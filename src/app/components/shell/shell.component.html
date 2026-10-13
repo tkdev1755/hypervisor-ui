@@ -1,0 +1,39 @@
+<div class="layout">
+  <aside class="sidebar">
+    <a routerLink="/" class="brand">
+      <span class="brand-mark"><app-icon name="cpu" [size]="18" /></span>
+      <span>
+        <span class="brand-name">Hypervisor</span>
+        <span class="brand-sub">Gestion KVM</span>
+      </span>
+    </a>
+
+    <nav class="nav-list" aria-label="Navigation principale">
+      <div class="nav-title">Navigation</div>
+      @for (item of nav; track item.link) {
+        <a class="nav-item" [routerLink]="item.link" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: item.exact }">
+          <app-icon [name]="item.icon" [size]="17" />
+          {{ item.label }}
+        </a>
+      }
+    </nav>
+
+    <button type="button" class="health" [attr.data-health]="health()" (click)="checkHealth()" title="Vérifier à nouveau">
+      <span class="health-dot"></span>
+      <span class="health-text">
+        @switch (health()) {
+          @case ('checking') { Vérification de l'API… }
+          @case ('up') { API connectée }
+          @case ('down') { API injoignable }
+        }
+      </span>
+      <app-icon name="refresh" [size]="14" />
+    </button>
+  </aside>
+
+  <main class="content">
+    <div class="page">
+      <router-outlet />
+    </div>
+  </main>
+</div>

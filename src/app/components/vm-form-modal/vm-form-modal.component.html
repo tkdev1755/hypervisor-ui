@@ -1,0 +1,23 @@
+<app-modal-shell
+  title="Créer une machine virtuelle"
+  [subtitle]="'Sur ' + hypervisorName()"
+  [state]="state()"
+  [error]="error()"
+  loadingLabel="Création de la VM…"
+  successMessage="Machine virtuelle créée."
+  (retry)="state.set('form')"
+  (done)="modalRef.close(result() ?? undefined)"
+>
+  <app-column [gap]="16">
+    <app-text-field label="Nom" placeholder="web-01" [(value)]="name" [error]="nameError()" (enter)="submit()" />
+    <app-column [gap]="6">
+      <app-text variant="small" weight="medium">Gabarit</app-text>
+      <app-choice-cards label="Gabarit" [options]="presets" [(value)]="preset" />
+    </app-column>
+  </app-column>
+
+  <app-row footer [gap]="8">
+    <app-button variant="ghost" (pressed)="modalRef.close()">Annuler</app-button>
+    <app-button (pressed)="submit()">Créer</app-button>
+  </app-row>
+</app-modal-shell>

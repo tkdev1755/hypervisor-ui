@@ -1,0 +1,8 @@
+<div class="empty">
+  <div class="icon-wrap"><app-icon [name]="icon()" [size]="22" /></div>
+  <div class="title">{{ title() }}</div>
+  @if (message()) {
+    <p class="message">{{ message() }}</p>
+  }
+  <ng-content />
+</div>

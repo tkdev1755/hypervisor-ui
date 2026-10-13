@@ -1,0 +1,22 @@
+<app-lesson [number]="8" title="Un parent et ses enfants : input() et output()" [code]="code" codeTitle="parent / enfant">
+  <app-text>
+    Un composant peut en contenir d'autres. Pour leur parler :
+  </app-text>
+  <app-text>
+    • le parent <strong>donne</strong> une valeur à l'enfant : l'enfant déclare une
+    <app-inline-code>input()</app-inline-code>, le parent écrit <app-inline-code>[vm]="vm"</app-inline-code> ;<br />
+    • l'enfant <strong>prévient</strong> le parent : l'enfant déclare une <app-inline-code>output()</app-inline-code> et
+    appelle <app-inline-code>.emit(...)</app-inline-code>, le parent écrit
+    <app-inline-code>(basculer)="basculer($event)"</app-inline-code>. <app-inline-code>$event</app-inline-code> contient la
+    valeur envoyée.
+  </app-text>
+  <app-callout type="tip" title="Qui modifie les données ?">
+    Toujours le parent. L'enfant ne fait qu'afficher et prévenir : c'est ce qui rend les composants réutilisables.
+  </app-callout>
+
+  <app-column demo [gap]="8">
+    @for (vm of vms(); track vm.nom) {
+      <app-demo-vm-card [vm]="vm" (basculer)="basculer($event)" />
+    }
+  </app-column>
+</app-lesson>

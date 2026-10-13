@@ -1,0 +1,38 @@
+<app-page
+  eyebrow="Infrastructure"
+  title="Hyperviseurs"
+  subtitle="Les hôtes KVM enregistrés dans l'API. Leur statut est revérifié auprès de libvirt à chaque chargement."
+>
+  <app-button actions variant="ghost" icon="refresh" [disabled]="loading()" (pressed)="load()">Actualiser</app-button>
+  <app-button actions icon="plus" (pressed)="add()">Ajouter</app-button>
+
+  @if (loading()) {
+    <app-loading label="Chargement des hyperviseurs…" />
+  } @else if (error(); as error) {
+    <app-error-panel [error]="error" [retryable]="true" (retry)="load()" />
+  } @else {
+    <app-grid [minItemWidth]="280">
+      @for (hypervisor of hypervisors(); track hypervisor.id) {
+        <app-resource-card
+          icon="server"
+          [title]="hypervisor.name"
+          [subtitle]="hypervisor.uri"
+          [status]="hypervisor.status"
+          [clickable]="true"
+          (tap)="open(hypervisor)"
+        >
+          <app-button variant="ghost" size="sm" icon="edit" (pressed)="edit(hypervisor)">Modifier</app-button>
+          <app-button variant="danger-ghost" size="sm" icon="trash" (pressed)="remove(hypervisor)">Supprimer</app-button>
+        </app-resource-card>
+      } @empty {
+        <app-empty-state
+          icon="server"
+          title="Aucun hyperviseur"
+          message="Ajoutez un hôte KVM avec son URI libvirt pour commencer à gérer ses machines virtuelles."
+        >
+          <app-button icon="plus" (pressed)="add()">Ajouter un hyperviseur</app-button>
+        </app-empty-state>
+      }
+    </app-grid>
+  }
+</app-page>

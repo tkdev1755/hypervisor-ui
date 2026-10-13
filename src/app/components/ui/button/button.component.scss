@@ -1,0 +1,11 @@
+:host {
+  display: inline-flex;
+}
+
+:host(.is-full) {
+  display: flex;
+}
+
+.btn {
+  white-space: nowrap;
+}

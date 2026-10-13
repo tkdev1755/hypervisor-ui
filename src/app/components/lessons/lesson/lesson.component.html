@@ -1,0 +1,22 @@
+<app-card [padding]="24">
+  <app-column [gap]="16">
+    <app-column [gap]="4">
+      <app-text variant="eyebrow">Leçon {{ number() }}</app-text>
+      <app-text variant="title">{{ title() }}</app-text>
+    </app-column>
+
+    <app-column [gap]="10">
+      <ng-content />
+    </app-column>
+
+    <app-grid [minItemWidth]="340" [gap]="16">
+      <app-code-block [code]="code()" [title]="codeTitle()" />
+      <app-card [padding]="16">
+        <app-column [gap]="12">
+          <app-text variant="eyebrow">Résultat en direct</app-text>
+          <ng-content select="[demo]" />
+        </app-column>
+      </app-card>
+    </app-grid>
+  </app-column>
+</app-card>

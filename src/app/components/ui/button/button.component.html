@@ -1,0 +1,19 @@
+<!-- Le contenu du bouton (icône + texte), réutilisé par les deux cas ci-dessous. -->
+<ng-template #content>
+  @if (loading()) {
+    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+  } @else if (icon(); as icon) {
+    <app-icon [name]="icon" [size]="iconSize()" />
+  }
+  <ng-content />
+</ng-template>
+
+@if (to(); as link) {
+  <a [class]="classes()" [routerLink]="link" (click)="onClick($event)">
+    <ng-container [ngTemplateOutlet]="content" />
+  </a>
+} @else {
+  <button type="button" [class]="classes()" [disabled]="disabled() || loading()" (click)="onClick($event)">
+    <ng-container [ngTemplateOutlet]="content" />
+  </button>
+}

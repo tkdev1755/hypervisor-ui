@@ -1,0 +1,19 @@
+<app-lesson [number]="4" title="Les classes" [code]="code" codeTitle="classes.ts">
+  <app-text>
+    Une <strong>classe</strong> est un modèle. Elle décrit des <strong>propriétés</strong> (les données) et des
+    <strong>méthodes</strong> (les actions). Le mot <app-inline-code>new</app-inline-code> fabrique un objet à partir de ce
+    modèle, et à l'intérieur de la classe, <app-inline-code>this</app-inline-code> désigne cet objet.
+  </app-text>
+  <app-callout type="tip" title="Le lien avec Angular">
+    Chaque composant Angular est une classe : ses propriétés sont les données affichées à l'écran, et ses méthodes sont
+    appelées quand l'utilisateur clique. C'est exactement ce que fait la démo ci-contre.
+  </app-callout>
+
+  <app-column demo [gap]="12">
+    <app-text variant="display">{{ compteur.valeur }}</app-text>
+    <app-row [gap]="8">
+      <app-button size="sm" icon="plus" (pressed)="compteur.incrementer()">incrementer()</app-button>
+      <app-button variant="ghost" size="sm" (pressed)="compteur.remettreAZero()">remettreAZero()</app-button>
+    </app-row>
+  </app-column>
+</app-lesson>

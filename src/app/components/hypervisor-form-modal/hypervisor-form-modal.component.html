@@ -1,0 +1,36 @@
+<app-modal-shell
+  [title]="hypervisor() ? 'Modifier l’hyperviseur' : 'Ajouter un hyperviseur'"
+  subtitle="L'API vérifie la connexion libvirt avant d'enregistrer."
+  [state]="state()"
+  [error]="error()"
+  loadingLabel="Connexion à libvirt…"
+  [successMessage]="hypervisor() ? 'Hyperviseur modifié.' : 'Hyperviseur ajouté.'"
+  (retry)="state.set('form')"
+  (done)="modalRef.close(result() ?? undefined)"
+>
+  <app-column [gap]="16">
+    <app-text-field label="Nom" placeholder="kvm-local" [(value)]="name" [error]="nameError()" (enter)="submit()" />
+
+    <app-column [gap]="8">
+      <app-text-field
+        label="URI libvirt"
+        placeholder="qemu:///system"
+        [monospace]="true"
+        [(value)]="uri"
+        [error]="uriError()"
+        (enter)="submit()"
+      />
+      <app-row [gap]="8" [wrap]="true">
+        <app-text variant="small" color="subtle">Exemples :</app-text>
+        @for (example of uriExamples; track example) {
+          <app-button variant="secondary" size="sm" (pressed)="uri.set(example)">{{ example }}</app-button>
+        }
+      </app-row>
+    </app-column>
+  </app-column>
+
+  <app-row footer [gap]="8">
+    <app-button variant="ghost" (pressed)="modalRef.close()">Annuler</app-button>
+    <app-button (pressed)="submit()">{{ hypervisor() ? 'Enregistrer' : 'Ajouter' }}</app-button>
+  </app-row>
+</app-modal-shell>

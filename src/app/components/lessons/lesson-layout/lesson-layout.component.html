@@ -1,0 +1,40 @@
+<app-lesson [number]="10" title="Construire un écran sans HTML ni CSS" [code]="code" codeTitle="profil.component.html">
+  <app-text>
+    Dans ce projet, on n'écrit ni balises HTML classiques ni CSS : on assemble des composants de mise en page, comme en
+    Flutter. Une <app-inline-code>&lt;app-row&gt;</app-inline-code> place ses enfants côte à côte, une
+    <app-inline-code>&lt;app-column&gt;</app-inline-code> les empile, et l'on règle les espaces avec
+    <app-inline-code>[gap]</app-inline-code> (en pixels).
+  </app-text>
+  <app-callout type="tip" title="Le réflexe">
+    Avant d'écrire un écran, dessinez-le en boîtes : quelles boîtes sont côte à côte (Row), lesquelles sont empilées
+    (Column) ? Le code suit directement ce dessin.
+  </app-callout>
+
+  <app-column demo [gap]="16">
+    <app-card>
+      <app-row [gap]="16">
+        <app-icon name="user" [size]="28" />
+        <app-expanded>
+          <app-column [gap]="2">
+            <app-text variant="heading">Ada Lovelace</app-text>
+            <app-text color="muted">Administratrice</app-text>
+          </app-column>
+        </app-expanded>
+        <app-button variant="secondary" size="sm">Profil</app-button>
+      </app-row>
+      <app-sized-box [height]="16" />
+      <app-row [gap]="8">
+        <app-status-badge status="running" />
+        <app-spacer />
+        <app-text variant="small" color="subtle">il y a 2 min</app-text>
+      </app-row>
+    </app-card>
+
+    <app-text variant="eyebrow">Mémo des composants</app-text>
+    <app-list>
+      @for (item of memo; track item.nom) {
+        <app-list-tile [title]="item.nom" [subtitle]="item.role" />
+      }
+    </app-list>
+  </app-column>
+</app-lesson>
