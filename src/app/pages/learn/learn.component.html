@@ -1,7 +1,7 @@
 <app-page
   eyebrow="Formation"
   title="Apprendre TypeScript et Angular"
-  subtitle="Chaque leçon montre le code à gauche et son résultat en direct à droite. Suivez-les dans l'ordre : chacune s'appuie sur la précédente."
+  subtitle="Chaque leçon montre le code à gauche et son résultat en direct à droite. Suivez-les dans l'ordre : chacune s'appuie sur la précédente. La partie 4 (Avancé) suppose les trois premières."
 >
   <app-tabs [tabs]="parties" [(active)]="partie" />
 
@@ -22,6 +22,15 @@
       }
       @case ('layout') {
         <app-lesson-layout />
+      }
+      @case ('avance') {
+        <app-lesson-routing />
+        <app-lesson-modals />
+        <app-lesson-custom-modal />
+        <app-lesson-context-bridge />
+        <app-lesson-advanced-signals />
+        <app-lesson-rxjs />
+        <app-lesson-injection />
       }
     }
   </app-column>

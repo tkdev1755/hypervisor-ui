@@ -1,0 +1,40 @@
+<app-lesson [number]="11" title="Le routage : adresses et paramètres" [code]="code" codeTitle="app.routes.ts + page">
+  <app-text>
+    Le <strong>routeur</strong> associe une adresse à une page. Une partie d'adresse précédée de deux-points
+    (<app-inline-code>:id</app-inline-code>) est un <strong>paramètre</strong> : <app-inline-code>/hypervisors/abc-123</app-inline-code>
+    appelle la même page que <app-inline-code>/hypervisors/xyz-789</app-inline-code>, avec un <app-inline-code>id</app-inline-code>
+    différent.
+  </app-text>
+  <app-text>
+    Grâce à <app-inline-code>withComponentInputBinding()</app-inline-code>, ce paramètre arrive <strong>directement dans un
+    input()</strong> de la page, sans rien à lire à la main. Il suffit de donner à l'input le même nom que le paramètre.
+  </app-text>
+  <app-text>
+    Avec <app-inline-code>loadComponent</app-inline-code>, Angular ne télécharge le code d'une page que lorsqu'on la visite
+    pour la première fois : l'application démarre plus vite. Dans le terminal, <app-inline-code>ng build</app-inline-code>
+    liste d'ailleurs ces morceaux (« lazy chunks »).
+  </app-text>
+  <app-callout type="warning" title="Un paramètre d'adresse est toujours du texte">
+    L'URL ne peut pas contenir un objet, seulement des chaînes, et l'utilisateur peut la modifier. On n'y met donc qu'un
+    identifiant ; le reste des données est retrouvé à partir de lui. C'est exactement le rôle de la leçon 14 (le ContextBridge).
+  </app-callout>
+  <app-callout title="Essayez">
+    Ouvrez un hyperviseur depuis la liste, puis rafraîchissez la page (F5). L'adresse ne contient que l'identifiant, et
+    pourtant la page se réaffiche : la donnée a été rechargée depuis l'API.
+  </app-callout>
+
+  <app-column demo [gap]="12">
+    <app-text variant="small" color="muted">Adresse actuelle (mise à jour à chaque navigation) :</app-text>
+    <app-text variant="code" color="accent">{{ adresse() }}</app-text>
+    <app-text variant="small" color="muted">Les routes de cette application, lues dans la configuration du routeur :</app-text>
+    <app-list>
+      @for (route of routes; track route.adresse) {
+        <app-list-tile
+          [icon]="route.parametre ? 'code' : 'arrow-right'"
+          [title]="route.adresse"
+          [subtitle]="route.titre + (route.parametre ? ' — avec un paramètre' : '')"
+        />
+      }
+    </app-list>
+  </app-column>
+</app-lesson>

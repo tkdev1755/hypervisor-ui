@@ -1,0 +1,40 @@
+<app-lesson [number]="13" title="Écrire sa propre modale" [code]="code" codeTitle="une modale de A à Z">
+  <app-text>Une modale est un composant comme les autres, avec trois particularités :</app-text>
+  <app-text>
+    • elle injecte <app-inline-code>ModalRef</app-inline-code> pour se fermer elle-même
+    (<app-inline-code>modalRef.close(resultat)</app-inline-code>) ;<br />
+    • elle enveloppe son contenu dans <app-inline-code>&lt;app-modal-shell&gt;</app-inline-code>, qui fournit le titre, la
+    croix, et les écrans de chargement, de succès et d'erreur ;<br />
+    • elle garde son état dans un signal <app-inline-code>state</app-inline-code> qui prend, dans l'ordre, les valeurs
+    <app-inline-code>'form'</app-inline-code>, <app-inline-code>'loading'</app-inline-code>, puis
+    <app-inline-code>'success'</app-inline-code> ou <app-inline-code>'error'</app-inline-code>.
+  </app-text>
+  <app-text>
+    Le cadre affiche ce qui est écrit entre ses balises <strong>uniquement dans l'état « form »</strong>. Le mot
+    <app-inline-code>footer</app-inline-code> sur un élément le place en bas, à côté des boutons : c'est la
+    <strong>projection de contenu</strong> (<app-inline-code>ng-content select</app-inline-code>), la même mécanique que
+    <app-inline-code>demo</app-inline-code> dans les leçons.
+  </app-text>
+  <app-text>
+    Pendant l'état « loading », le cadre bloque la fermeture (croix, Échap, clic à côté) en écrivant dans
+    <app-inline-code>modalRef.closeGuard</app-inline-code> : une action en cours ne peut pas être abandonnée par erreur.
+  </app-text>
+  <app-callout type="warning" title="Les erreurs de saisie ne s'affichent qu'après un premier essai">
+    C'est le rôle du signal <app-inline-code>submitted</app-inline-code> : sans lui, le champ serait rouge dès l'ouverture,
+    avant même que l'utilisateur ait tapé quoi que ce soit.
+  </app-callout>
+  <app-callout type="tip" title="Essayez">
+    Validez avec un champ vide (erreur de saisie), puis avec « db-01 » (erreur de l'API, puis « Réessayer »), puis avec un
+    nom valide (succès, puis « Terminer »).
+  </app-callout>
+
+  <app-column demo [gap]="12">
+    <app-text variant="code">Nom de la VM : {{ nom() }}</app-text>
+    <app-row>
+      <app-button size="sm" icon="edit" (pressed)="renommer()">Renommer…</app-button>
+    </app-row>
+    @if (dernierRenommage(); as dernier) {
+      <app-text color="success" variant="small">Dernier renommage : {{ dernier }}</app-text>
+    }
+  </app-column>
+</app-lesson>

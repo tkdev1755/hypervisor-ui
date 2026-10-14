@@ -1,0 +1,52 @@
+<app-lesson [number]="17" title="Jetons d'injection et génériques" [code]="code" codeTitle="injection + génériques">
+  <app-text>
+    <strong>L'injection, version avancée.</strong> Jusqu'ici, <app-inline-code>inject(MonService)</app-inline-code> recevait une
+    classe. Pour fournir autre chose (une liste, une valeur, une configuration), on crée un
+    <strong>jeton</strong> : <app-inline-code>new InjectionToken&lt;T&gt;('NOM')</app-inline-code>. Avec
+    <app-inline-code>multi: true</app-inline-code>, chaque fournisseur <em>ajoute</em> un élément à une liste au lieu de
+    remplacer le précédent.
+  </app-text>
+  <app-text>
+    C'est le modèle de deux briques du projet : un mapper d'erreurs par API, et un descripteur par type de donnée du
+    ContextBridge. Pour ajouter une API ou un type, on <strong>ajoute</strong> une ligne dans
+    <app-inline-code>app.config.ts</app-inline-code> ; le code existant ne change pas.
+  </app-text>
+  <app-text>
+    <strong>Les génériques.</strong> <app-inline-code>K extends ContextType</app-inline-code> signifie « K est l'un de ces
+    types ». Le reste de la signature en dépend : le type de <app-inline-code>value</app-inline-code> se déduit du premier
+    argument. L'éditeur refuse une donnée qui ne correspond pas, avant même de lancer l'application.
+    <app-inline-code>keyof</app-inline-code> produit l'union des noms de champs d'une interface.
+  </app-text>
+  <app-callout type="warning" title="Une fonction « provideXxx » plutôt qu'un objet à recopier">
+    On n'écrit jamais l'objet <app-inline-code>{{ objetFournisseur }}</app-inline-code> à la main dans
+    <app-inline-code>app.config.ts</app-inline-code> : la fonction <app-inline-code>provideXxx</app-inline-code> le fait, et
+    l'oubli de <app-inline-code>multi: true</app-inline-code> (qui écraserait les autres) devient impossible.
+  </app-callout>
+  <app-callout type="tip" title="Essayez">
+    Dans <app-inline-code>lesson-injection.component.ts</app-inline-code>, écrivez
+    <app-inline-code>bridge.prime('hypervisor', 'x', 42)</app-inline-code> : l'éditeur souligne l'erreur en rouge.
+  </app-callout>
+
+  <app-column demo [gap]="12">
+    <app-text variant="small" color="muted">Contenu du jeton CONTEXT_DESCRIPTORS :</app-text>
+    <app-list>
+      @for (descripteur of descripteurs; track descripteur.type) {
+        <app-list-tile
+          icon="code"
+          [title]="descripteur.type"
+          [subtitle]="descripteur.rechargeable ? 'rechargeable depuis l’API' : 'saisi par l’utilisateur'"
+        />
+      } @empty {
+        <app-list-tile title="(aucun)" />
+      }
+    </app-list>
+    <app-text variant="small" color="muted">Contenu du jeton ERROR_MAPPERS :</app-text>
+    <app-list>
+      @for (api of mappers; track api) {
+        <app-list-tile icon="alert" [title]="api" subtitle="traduit les erreurs de cette API" />
+      } @empty {
+        <app-list-tile title="(aucun)" />
+      }
+    </app-list>
+  </app-column>
+</app-lesson>

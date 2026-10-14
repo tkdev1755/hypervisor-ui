@@ -1,0 +1,24 @@
+<app-modal-shell
+  title="Renommer la machine virtuelle"
+  [subtitle]="'Nom actuel : ' + currentName()"
+  [state]="state()"
+  [error]="error()"
+  loadingLabel="Renommage en cours…"
+  successMessage="Machine virtuelle renommée."
+  (retry)="state.set('form')"
+  (done)="modalRef.close(name())"
+>
+  <app-text-field
+    label="Nouveau nom"
+    [placeholder]="currentName()"
+    hint="Essayez « db-01 » pour provoquer une erreur."
+    [(value)]="name"
+    [error]="nameError()"
+    (enter)="submit()"
+  />
+
+  <app-row footer [gap]="8">
+    <app-button variant="ghost" (pressed)="modalRef.close()">Annuler</app-button>
+    <app-button (pressed)="submit()">Renommer</app-button>
+  </app-row>
+</app-modal-shell>

@@ -22,7 +22,7 @@
 
 ### Écrans
 
-- [x] Accueil, page Apprendre (10 leçons : TypeScript, Angular, mise en page).
+- [x] Accueil, page Apprendre (17 leçons : TypeScript, Angular, mise en page, et une partie « Avancé »).
 - [x] Hyperviseurs : liste, ajout, modification, suppression.
 - [x] Détail d'un hyperviseur : onglets VM (liste, démarrage, arrêt,
       suppression, création), disques et réseaux (lecture).
@@ -46,6 +46,21 @@
 - [x] Barre latérale « Inventaire » (hyperviseurs → VM, état en marche / éteinte) et page `vm-detail`
       (`/hypervisors/:id/vms/:vmId`). Les pages appellent `InventoryService.refresh()` après chaque changement.
 - [ ] Non testé contre la vraie API (le mainteneur l'utilise sur de vrais hyperviseurs).
+
+### Formation avancée (14 octobre 2026)
+
+- [x] Onglet « 4. Avancé » de la page Apprendre, 7 leçons avec démo en direct :
+      11 routage (paramètres, `withComponentInputBinding`, lazy loading, `toSignal`),
+      12 ouvrir une modale (`ModalService`, `afterClosed$`, valeurs de résultat),
+      13 écrire sa modale (`modal-shell`, états, `closeGuard`, projection de contenu ;
+      modale d'exemple `lessons/demo-rename-modal`),
+      14 ContextBridge (`prime` / `peek` / `resolve` / `invalidate`, descripteurs),
+      15 signals avancés (`computed`, `linkedSignal`, `effect` + `untracked`),
+      16 RxJS (`timer`, `switchMap`, `filter`, `take`, `takeUntilDestroyed`, suivi d'une tâche),
+      17 injection et génériques (`InjectionToken`, `multi: true`, `provideXxx`, `keyof`).
+- [x] Vérifié avec `ng build` (0 avertissement) et les démos essayées dans le navigateur.
+- [ ] Reste à couvrir si l'équipe bloque : formulaires et validation (partiellement
+      couverts par la leçon 13), `@defer`, tests unitaires.
 
 ### Documentation
 
@@ -140,8 +155,9 @@ un 409 affiche un message métier clair.
 
 ### Étape 7 — Pédagogie (au fil de l'eau)
 
-- Leçons à ajouter si l'équipe bloque : formulaires et validation, routage
-  (paramètres d'adresse), RxJS (`timer`, `switchMap`) avant l'étape 3.
+- FAIT le 14 octobre : routage, RxJS, modales, ContextBridge, signals avancés, injection
+  (partie « Avancé », leçons 11 à 17). Reste, si l'équipe bloque : formulaires et validation
+  plus détaillés, `@defer`.
 - Garder les exemples très simples et les noms en français dans les leçons.
 
 ## 4. Décisions prises (et pourquoi)
@@ -164,3 +180,4 @@ un 409 affiche un message métier clair.
 | 13 octobre 2026 | Réécriture : structure classique, trois fichiers par composant, mise en page à la Flutter, page Apprendre. |
 | 14 octobre 2026 | CLAUDE.md et ce plan ; écarts avec l'API relevés (section 2). |
 | 14 octobre 2026 | MVP : création complète, clonage, suppression, console VNC, fausse API à jour. |
+| 14 octobre 2026 | Formation avancée : 7 leçons (routage, modales, ContextBridge, signals, RxJS, injection). |

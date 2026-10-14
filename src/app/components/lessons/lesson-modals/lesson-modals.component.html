@@ -1,0 +1,35 @@
+<app-lesson [number]="12" title="Ouvrir une modale" [code]="code" codeTitle="ModalService.open()">
+  <app-text>
+    Une <strong>modale</strong> est une fenêtre posée par-dessus la page. On ne la met jamais dans un
+    <app-inline-code>.html</app-inline-code> : on l'<strong>ouvre depuis le code</strong> avec
+    <app-inline-code>ModalService.open()</app-inline-code>, en lui donnant le composant à afficher et ses
+    <app-inline-code>inputs</app-inline-code>.
+  </app-text>
+  <app-text>
+    <app-inline-code>open()</app-inline-code> renvoie une <strong>ModalRef</strong>, une télécommande. Son
+    <app-inline-code>afterClosed$</app-inline-code> est un Observable qui émet <strong>une seule fois</strong>, quand la modale
+    se ferme : c'est là qu'on récupère le résultat, puis qu'on recharge la page si besoin.
+  </app-text>
+  <app-text>
+    Le premier type entre chevrons (<app-inline-code>ConfirmModalComponent</app-inline-code>) permet à TypeScript de vérifier
+    les <app-inline-code>inputs</app-inline-code> : une faute de frappe sur un nom, ou un nombre à la place d'un texte, ne
+    compile pas. Le second (<app-inline-code>boolean</app-inline-code>) est le type du résultat.
+  </app-text>
+  <app-callout type="warning" title="« action » est une fonction, pas un Observable">
+    On écrit <app-inline-code>action: () => this.vms.delete(id)</app-inline-code>, avec la flèche. Sans elle, la requête partirait
+    à l'ouverture de la modale, avant même que l'utilisateur ait confirmé.
+  </app-callout>
+  <app-callout type="tip" title="Essayez">
+    Lancez la confirmation, puis fermez-la de trois façons (Annuler, la croix, Échap) et regardez le résultat. Essayez aussi
+    de fermer la modale <em>pendant</em> le chargement : c'est impossible.
+  </app-callout>
+
+  <app-column demo [gap]="12">
+    <app-row [gap]="8">
+      <app-button variant="danger" size="sm" icon="trash" (pressed)="supprimer()">Supprimer (réussit)</app-button>
+      <app-button variant="danger-ghost" size="sm" icon="alert" (pressed)="supprimerEnEchec()">Supprimer (échoue)</app-button>
+    </app-row>
+    <app-text variant="small" color="muted">Résultat de afterClosed$ :</app-text>
+    <app-text variant="code" color="accent">{{ resultat() }}</app-text>
+  </app-column>
+</app-lesson>

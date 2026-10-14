@@ -1,0 +1,54 @@
+<app-lesson [number]="14" title="Le ContextBridge : passer une donnée d'une page à l'autre" [code]="code" codeTitle="context-bridge">
+  <app-text>
+    <strong>Le problème.</strong> La page « liste » a déjà chargé l'hyperviseur sur lequel on clique. Pour la page « détail »,
+    on pourrait recopier tous ses champs dans l'URL (fragile, et modifiable par l'utilisateur), ou le recharger depuis l'API
+    (une requête inutile). Dans les deux cas, ce n'est pas satisfaisant.
+  </app-text>
+  <app-text>
+    <strong>La solution.</strong> Le <app-inline-code>ContextBridgeService</app-inline-code> est un cache en mémoire, rangé par
+    <app-inline-code>type::id</app-inline-code>. La liste y <em>range</em> la donnée (<app-inline-code>prime</app-inline-code>) ;
+    le détail la <em>relit</em> (<app-inline-code>resolve</app-inline-code>). L'URL ne garde que l'identifiant.
+  </app-text>
+  <app-text>
+    <strong>Et si le cache est vide ?</strong> Page rafraîchie, lien partagé : <app-inline-code>resolve</app-inline-code> la
+    recharge tout seul depuis l'API, grâce au <strong>descripteur</strong> du type, qui dit comment faire. La page détail
+    n'a donc pas à savoir d'où vient la donnée.
+  </app-text>
+  <app-text>
+    <strong>Deux appels simultanés = une seule requête.</strong> Le service garde en mémoire la requête en cours et la
+    partage (<app-inline-code>shareReplay</app-inline-code>, voir la leçon 16) : la barre latérale et la page peuvent demander
+    la même donnée au même moment.
+  </app-text>
+  <app-callout type="warning" title="Penser à invalidate()">
+    Si vous modifiez ou supprimez un élément, la copie en cache est périmée : appelez
+    <app-inline-code>invalidate</app-inline-code>, sinon la page détail affichera l'ancienne version.
+  </app-callout>
+  <app-callout title="Ajouter un nouveau type (une VM, par exemple)">
+    1. une ligne dans <app-inline-code>ContextTypes</app-inline-code> ; 2. un descripteur dans
+    <app-inline-code>config/context-descriptors.ts</app-inline-code> ; 3. <app-inline-code>prime</app-inline-code> d'un côté,
+    <app-inline-code>resolve</app-inline-code> de l'autre. TypeScript vérifie que la donnée rangée a bien la forme du type.
+  </app-callout>
+  <app-callout type="tip" title="Essayez">
+    Cliquez sur « Lire » (rien), « Résoudre » (un appel à l'API, qui répond « introuvable » : cet hyperviseur n'existe pas),
+    puis « Ranger », puis « Résoudre » (le cache répond, sans requête). Ouvrez aussi la console du navigateur : le service y
+    écrit chacune de ses actions en mode développement.
+  </app-callout>
+
+  <app-column demo [gap]="12">
+    <app-row [gap]="8" [wrap]="true">
+      <app-button size="sm" icon="plus" (pressed)="ranger()">Ranger (prime)</app-button>
+      <app-button size="sm" variant="secondary" icon="code" (pressed)="lire()">Lire (peek)</app-button>
+      <app-button size="sm" variant="secondary" icon="refresh" [loading]="enCours()" (pressed)="resoudre()">Résoudre (resolve)</app-button>
+      <app-button size="sm" variant="ghost" icon="trash" (pressed)="oublier()">Oublier (invalidate)</app-button>
+    </app-row>
+    <app-text variant="small" color="muted">Journal :</app-text>
+    @for (ligne of journal(); track $index) {
+      <app-text variant="code">{{ ligne }}</app-text>
+    } @empty {
+      <app-text variant="small" color="subtle">(vide)</app-text>
+    }
+    @if (erreur(); as erreur) {
+      <app-error-panel [error]="erreur" />
+    }
+  </app-column>
+</app-lesson>

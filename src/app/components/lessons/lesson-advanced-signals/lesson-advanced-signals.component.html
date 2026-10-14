@@ -1,0 +1,38 @@
+<app-lesson [number]="15" title="Signals avancés : computed, linkedSignal, effect" [code]="code" codeTitle="signals avancés">
+  <app-text>
+    La leçon 6 a présenté <app-inline-code>signal</app-inline-code> et <app-inline-code>computed</app-inline-code>. Il en
+    existe deux autres, qu'on utilise dans des cas précis :
+  </app-text>
+  <app-text>
+    • <strong>computed</strong> : une valeur <em>calculée</em> à partir d'autres signals, en lecture seule. Elle n'est
+    recalculée que si l'une de ses dépendances change. C'est le bon outil dans 90 % des cas.<br />
+    • <strong>linkedSignal</strong> : une valeur calculée <em>que l'on peut aussi modifier</em>. Elle revient à sa valeur
+    calculée dès que sa source change. C'est le cas d'un formulaire pré-rempli : choisir un gabarit de VM remet les
+    valeurs par défaut, mais l'utilisateur peut ensuite les ajuster.<br />
+    • <strong>effect</strong> : une <em>action</em> à exécuter quand des signals changent (écrire dans un journal, appeler une
+    librairie extérieure). Il ne sert <strong>pas</strong> à calculer une valeur : pour cela, c'est un computed.
+  </app-text>
+  <app-callout type="warning" title="Écrire dans un signal depuis un effect : untracked">
+    Un effect suit <em>tous</em> les signals qu'il lit, y compris avec <app-inline-code>update()</app-inline-code>, qui lit
+    l'ancienne valeur. Sans <app-inline-code>untracked</app-inline-code>, l'effect se relancerait lui-même à l'infini. Ici,
+    seules les lectures de <app-inline-code>pool</app-inline-code> et <app-inline-code>taille</app-inline-code> sont suivies.
+  </app-callout>
+  <app-callout type="tip" title="Un effect existe déjà dans le projet">
+    Dans <app-inline-code>modal-shell.component.ts</app-inline-code>, un effect recopie l'état de la modale dans
+    <app-inline-code>closeGuard</app-inline-code> pour interdire la fermeture pendant un chargement.
+  </app-callout>
+  <app-callout title="Essayez">
+    Changez de pool : la taille revient à sa valeur par défaut (linkedSignal). Changez la taille avec − / + : l'espace
+    restant se met à jour (computed) et le journal s'allonge (effect).
+  </app-callout>
+
+  <app-column demo [gap]="12">
+    <app-choice-cards label="Pool de stockage" [options]="choix" [columns]="2" [(value)]="pool" />
+    <app-number-field label="Taille du disque" [(value)]="taille" [min]="1" [max]="capacite()" [step]="10" unit="Go" />
+    <app-text [color]="restant() < 0 ? 'danger' : 'success'">Espace restant dans le pool : {{ restant() }} Go</app-text>
+    <app-text variant="small" color="muted">Journal de l'effect (5 dernières valeurs) :</app-text>
+    @for (ligne of historique(); track $index) {
+      <app-text variant="code">{{ ligne }}</app-text>
+    }
+  </app-column>
+</app-lesson>

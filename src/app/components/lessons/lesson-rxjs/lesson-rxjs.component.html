@@ -1,0 +1,52 @@
+<app-lesson [number]="16" title="RxJS en pratique : suivre une tâche de fond" [code]="code" codeTitle="job.service.ts">
+  <app-text>
+    Un <strong>Observable</strong> est un flux de valeurs dans le temps. Un <strong>opérateur</strong> (dans
+    <app-inline-code>.pipe(...)</app-inline-code>) transforme ce flux, comme une chaîne de montage. Les cinq que l'on
+    rencontre dans le projet :
+  </app-text>
+  <app-text>
+    • <app-inline-code>timer(0, 1000)</app-inline-code> : émet 0, 1, 2… toutes les secondes ;<br />
+    • <app-inline-code>switchMap</app-inline-code> : à chaque valeur, lance un nouvel Observable (ici une requête) et
+    <strong>abandonne</strong> la précédente si elle n'est pas finie ;<br />
+    • <app-inline-code>filter</app-inline-code> : ne laisse passer que les valeurs qui conviennent ;<br />
+    • <app-inline-code>take(1)</app-inline-code> : s'arrête après la première valeur ;<br />
+    • <app-inline-code>tap</app-inline-code> : observe au passage, sans rien changer (journal, signal).
+  </app-text>
+  <app-text>
+    C'est ce qui permet de suivre un clonage de VM en cinq lignes : interroger la tâche toutes les secondes jusqu'à ce
+    qu'elle ne soit plus « en cours ».
+  </app-text>
+  <app-callout type="warning" title="Penser à se désabonner">
+    Un abonnement à un flux qui ne se termine jamais (comme <app-inline-code>timer</app-inline-code>) continue après la
+    destruction du composant. Deux protections : <app-inline-code>take(1)</app-inline-code> si on n'attend qu'une valeur,
+    ou <app-inline-code>takeUntilDestroyed</app-inline-code>. Les appels HTTP, eux, se terminent tout seuls.
+  </app-callout>
+  <app-callout type="tip" title="Essayez">
+    Lancez la tâche et laissez-la finir (cinq interrogations). Relancez-la, puis annulez en cours de route : le journal
+    s'arrête net.
+  </app-callout>
+
+  <app-column demo [gap]="12">
+    <app-row [gap]="8">
+      <app-button size="sm" icon="play" [disabled]="etat() === 'en-cours'" (pressed)="lancer()">Lancer la tâche</app-button>
+      <app-button size="sm" variant="ghost" icon="stop" [disabled]="etat() !== 'en-cours'" (pressed)="annuler()">Annuler le suivi</app-button>
+    </app-row>
+    @switch (etat()) {
+      @case ('en-cours') {
+        <app-text>Tâche en cours : {{ progression() }} %</app-text>
+      }
+      @case ('terminee') {
+        <app-text color="success">Tâche terminée : {{ progression() }} %</app-text>
+      }
+      @case ('annulee') {
+        <app-text color="warning">Suivi annulé à {{ progression() }} %</app-text>
+      }
+      @default {
+        <app-text color="muted">Aucune tâche lancée.</app-text>
+      }
+    }
+    @for (ligne of journal(); track $index) {
+      <app-text variant="code">{{ ligne }}</app-text>
+    }
+  </app-column>
+</app-lesson>
