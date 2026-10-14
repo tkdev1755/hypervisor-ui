@@ -1,0 +1,19 @@
+<app-modal-shell
+  title="Cloner une machine virtuelle"
+  [subtitle]="'Copie de ' + source().name"
+  [state]="state()"
+  [error]="error()"
+  loadingLabel="Copie des disques en cours, cela peut prendre quelques minutes…"
+  successMessage="Machine virtuelle clonée."
+  (retry)="state.set('form')"
+  (done)="modalRef.close(result() ?? undefined)"
+>
+  <app-column [gap]="16">
+    <app-text-field label="Nom du clone" [placeholder]="source().name + '-clone'" [(value)]="name" [error]="nameError()" (enter)="submit()" />
+  </app-column>
+
+  <app-row footer [gap]="8">
+    <app-button variant="ghost" (pressed)="modalRef.close()">Annuler</app-button>
+    <app-button (pressed)="submit()">Cloner</app-button>
+  </app-row>
+</app-modal-shell>

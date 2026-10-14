@@ -1,8 +1,15 @@
 :host {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 .modal-shell {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -33,7 +40,15 @@
   margin: -4px -8px 0 0;
 }
 
+.head,
+.foot {
+  flex: none;
+}
+
 .body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   padding: var(--space-5);
 }
 

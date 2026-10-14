@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
+import { SidebarInventoryComponent } from './sidebar-inventory/sidebar-inventory.component';
 import { IconComponent } from '@app/components/ui/icon/icon.component';
 import { IconName } from '@app/components/ui/icon/icons';
 import { HypervisorService } from '@app/services/hypervisor.service';
@@ -19,7 +20,7 @@ interface NavItem {
  */
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, IconComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, IconComponent, SidebarInventoryComponent],
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.scss',
 })

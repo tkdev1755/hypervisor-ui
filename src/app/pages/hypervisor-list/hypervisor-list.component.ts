@@ -14,6 +14,7 @@ import { AppError } from '@app/models/app-error.model';
 import { Hypervisor } from '@app/models/hypervisor.model';
 import { ContextBridgeService } from '@app/services/context-bridge.service';
 import { HypervisorService } from '@app/services/hypervisor.service';
+import { InventoryService } from '@app/services/inventory.service';
 import { ModalService } from '@app/services/modal.service';
 
 /**
@@ -32,6 +33,7 @@ export class HypervisorListComponent implements OnInit {
   private readonly modal = inject(ModalService);
   private readonly bridge = inject(ContextBridgeService);
   private readonly router = inject(Router);
+  private readonly inventory = inject(InventoryService);
 
   // L'état de la page, sous forme de signals.
   protected readonly hypervisors = signal<Hypervisor[]>([]);
@@ -70,6 +72,7 @@ export class HypervisorListComponent implements OnInit {
       .afterClosed$.subscribe((created) => {
         if (created) {
           this.load();
+          this.inventory.refresh();
         }
       });
   }
@@ -81,6 +84,7 @@ export class HypervisorListComponent implements OnInit {
         if (updated) {
           this.bridge.invalidate('hypervisor', hypervisor.id);
           this.load();
+          this.inventory.refresh();
         }
       });
   }
@@ -102,6 +106,7 @@ export class HypervisorListComponent implements OnInit {
         if (deleted) {
           this.bridge.invalidate('hypervisor', hypervisor.id);
           this.load();
+          this.inventory.refresh();
         }
       });
   }

@@ -1,0 +1,28 @@
+<app-column [gap]="6">
+  @if (label()) {
+    <label class="field-label" [for]="id">{{ label() }}</label>
+  }
+  <app-row [gap]="8">
+    <app-button variant="secondary" icon="minus" [disabled]="value() <= min()" (pressed)="change(-1)" />
+    <input
+      class="form-control number"
+      [class.is-invalid]="!!error()"
+      [id]="id"
+      type="number"
+      [min]="min()"
+      [max]="max()"
+      [step]="step()"
+      [value]="value()"
+      (input)="onInput($event)"
+    />
+    <app-button variant="secondary" icon="plus" [disabled]="value() >= max()" (pressed)="change(1)" />
+    @if (unit()) {
+      <app-text color="muted">{{ unit() }}</app-text>
+    }
+  </app-row>
+  @if (error()) {
+    <app-text variant="small" color="danger">{{ error() }}</app-text>
+  } @else if (hint()) {
+    <app-text variant="small" color="subtle">{{ hint() }}</app-text>
+  }
+</app-column>

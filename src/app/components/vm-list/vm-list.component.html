@@ -17,11 +17,14 @@
       @for (vm of list(); track vm.id) {
         <app-list-tile icon="cpu" [title]="vm.name" [subtitle]="describe(vm)" [status]="vm.status">
           @if (vm.status === 'running') {
+            <app-button variant="ghost" size="sm" icon="terminal" (pressed)="console(vm)">Console</app-button>
             <app-button variant="ghost" size="sm" icon="stop" [loading]="busyId() === vm.id" (pressed)="stop(vm)">Arrêter</app-button>
+            <app-button variant="danger-ghost" size="sm" icon="stop" (pressed)="forceStop(vm)">Forcer</app-button>
           } @else {
             <app-button variant="ghost" size="sm" icon="play" [loading]="busyId() === vm.id" (pressed)="start(vm)">Démarrer</app-button>
+            <app-button variant="ghost" size="sm" icon="copy" (pressed)="clone(vm)">Cloner</app-button>
+            <app-button variant="danger-ghost" size="sm" icon="trash" (pressed)="remove(vm)" />
           }
-          <app-button variant="danger-ghost" size="sm" icon="trash" (pressed)="remove(vm)" />
         </app-list-tile>
       }
     </app-list>

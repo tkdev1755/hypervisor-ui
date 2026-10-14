@@ -1,0 +1,18 @@
+<app-modal-shell
+  [title]="'Supprimer « ' + vm().name + ' » ?'"
+  [state]="state()"
+  [error]="error()"
+  loadingLabel="Suppression de la VM…"
+  successMessage="VM supprimée."
+  (retry)="state.set('form')"
+  (done)="modalRef.close(true)"
+>
+  <app-column [gap]="16">
+    <app-choice-cards label="Disques" [columns]="2" [options]="choices" [(value)]="deleteDisks" />
+  </app-column>
+
+  <app-row footer [gap]="8">
+    <app-button variant="ghost" (pressed)="modalRef.close()">Annuler</app-button>
+    <app-button variant="danger" (pressed)="confirm()">Supprimer</app-button>
+  </app-row>
+</app-modal-shell>

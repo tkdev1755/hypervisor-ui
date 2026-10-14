@@ -35,6 +35,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./pages/hypervisor-detail/hypervisor-detail.component').then((m) => m.HypervisorDetailComponent),
       },
+      {
+        path: 'hypervisors/:id/vms/:vmId',
+        title: 'Machine virtuelle · Hypervisor',
+        loadComponent: () => import('./pages/vm-detail/vm-detail.component').then((m) => m.VmDetailComponent),
+      },
       { path: '**', component: NotFoundComponent, title: 'Page introuvable · Hypervisor' },
     ],
   },

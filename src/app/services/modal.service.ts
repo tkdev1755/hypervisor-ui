@@ -19,14 +19,15 @@ export type InputsOf<C> = {
     : never;
 };
 
-export type ModalSize = 'sm' | 'md' | 'lg';
+/** 'screen' : 80 % de la largeur et 95 % de la hauteur de l'écran (pour la console VNC). */
+export type ModalSize = 'sm' | 'md' | 'lg' | 'screen';
 
 export interface ModalOptions<C> {
   inputs?: InputsOf<C>;
   size?: ModalSize;
 }
 
-const WIDTHS: Record<ModalSize, string> = { sm: '420px', md: '560px', lg: '760px' };
+const WIDTHS: Record<ModalSize, string> = { sm: '420px', md: '560px', lg: '760px', screen: '80vw' };
 const CLOSE_ANIMATION_MS = 180;
 
 /**
@@ -44,6 +45,7 @@ export class ModalService {
 
   open<C, R = unknown>(component: Type<C>, options: ModalOptions<C> = {}): ModalRef<R> {
     this.current?.close();
+    const screen = options.size === 'screen';
 
     const overlayRef = createOverlayRef(this.injector, {
       hasBackdrop: true,
@@ -51,7 +53,12 @@ export class ModalService {
       panelClass: 'app-modal-panel',
       width: WIDTHS[options.size ?? 'md'],
       maxWidth: 'calc(100vw - 32px)',
-      positionStrategy: createGlobalPositionStrategy(this.injector).centerHorizontally().top('12vh'),
+      // Les modales normales sont limitées à la hauteur de l'écran (leur corps défile) ;
+      // la modale 'screen' a une hauteur fixe.
+      ...(screen ? { height: '95vh' } : { maxHeight: 'calc(88vh - 16px)' }),
+      positionStrategy: createGlobalPositionStrategy(this.injector)
+        .centerHorizontally()
+        .top(screen ? '2.5vh' : '12vh'),
       scrollStrategy: createBlockScrollStrategy(this.injector),
     });
 

@@ -1,0 +1,10 @@
+:host {
+  display: block;
+}
+
+.frame {
+  width: 100%;
+  border: 1px solid var(--bs-border-color);
+  border-radius: 8px;
+  background: #000;
+}

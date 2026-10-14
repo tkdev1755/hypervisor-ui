@@ -1,0 +1,19 @@
+<app-modal-shell
+  [title]="'Console de ' + vm().name"
+  subtitle="Affichage VNC (noVNC)"
+  [state]="state()"
+  [error]="error()"
+  loadingLabel="Connexion à la console…"
+  (retry)="connect()"
+>
+  <app-column [gap]="12">
+    @if (vnc(); as vnc) {
+      <app-frame [url]="vnc.novnc_url" title="Console VNC" height="calc(95vh - 210px)" />
+    }
+  </app-column>
+
+  <app-row footer [gap]="8">
+    <app-button variant="ghost" icon="arrow-right" (pressed)="openInTab()">Ouvrir dans un onglet</app-button>
+    <app-button (pressed)="modalRef.close()">Fermer</app-button>
+  </app-row>
+</app-modal-shell>

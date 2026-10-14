@@ -1,0 +1,47 @@
+<div class="head">
+  <span class="title">Inventaire</span>
+  <button type="button" class="refresh" title="Actualiser l'inventaire" aria-label="Actualiser l'inventaire" [disabled]="inventory.loading()" (click)="inventory.refresh()">
+    <app-icon name="refresh" [size]="14" />
+  </button>
+</div>
+
+<div class="tree">
+  @for (hypervisor of inventory.hypervisors(); track hypervisor.id) {
+    <div class="row">
+      <button
+        type="button"
+        class="toggle"
+        [class.is-open]="isOpen(hypervisor.id)"
+        [attr.aria-expanded]="isOpen(hypervisor.id)"
+        aria-label="Plier ou déplier"
+        (click)="toggle(hypervisor.id)"
+      >
+        <app-icon name="chevron-right" [size]="14" />
+      </button>
+      <a
+        class="item"
+        [routerLink]="['/hypervisors', hypervisor.id]"
+        routerLinkActive="is-active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        <app-icon name="server" [size]="15" />
+        <span class="label">{{ hypervisor.name }}</span>
+        <span class="dot" [attr.data-on]="hypervisor.status === 'connected'"></span>
+      </a>
+    </div>
+
+    @if (isOpen(hypervisor.id)) {
+      @for (vm of inventory.vms()[hypervisor.id]; track vm.id) {
+        <a class="item child" [routerLink]="['/hypervisors', hypervisor.id, 'vms', vm.id]" routerLinkActive="is-active">
+          <app-icon name="cpu" [size]="14" />
+          <span class="label">{{ vm.name }}</span>
+          <span class="dot" [attr.data-on]="vm.status === 'running'" [title]="vm.status"></span>
+        </a>
+      } @empty {
+        <div class="child empty">Aucune VM</div>
+      }
+    }
+  } @empty {
+    <div class="empty">{{ inventory.loading() ? 'Chargement…' : 'Aucun hyperviseur' }}</div>
+  }
+</div>

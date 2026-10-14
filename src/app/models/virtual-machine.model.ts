@@ -8,9 +8,32 @@ export interface VirtualMachine {
   status: string;
 }
 
-/** Ce qu'on envoie pour créer (ou cloner) une VM. */
+/** Un volume désigné par son pool et son nom (jamais par un chemin). */
+export interface VolumeRef {
+  pool: string;
+  volume: string;
+}
+
+/** Un disque de VM : neuf (`size_gb`) ou existant (`volume`). */
+export interface DiskSpec {
+  pool: string;
+  size_gb?: number;
+  volume?: string;
+}
+
+/** Ce qu'on envoie pour créer une VM (voir `GET .../vm-options` pour les choix possibles). */
 export interface CreateVm {
   name: string;
   memory_mb: number;
   vcpus: number;
+  disks: DiskSpec[];
+  iso?: VolumeRef;
+  network?: string;
+  firmware?: string;
+  start?: boolean;
+}
+
+/** Ce qu'on envoie pour cloner une VM arrêtée. */
+export interface CloneVm {
+  name: string;
 }

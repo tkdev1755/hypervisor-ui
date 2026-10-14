@@ -26,6 +26,15 @@ const CATALOG: Record<BusinessErrorCode, { title: string; message: string }> = {
     title: 'Requête invalide',
     message: "Les informations envoyées n'ont pas été acceptées par l'API.",
   },
+  CONFLICT: {
+    title: 'Action impossible en l’état',
+    message:
+      'Un nom est déjà pris, un disque est déjà utilisé, ou la VM n’est pas dans le bon état (par exemple : elle doit être arrêtée pour être clonée ou supprimée).',
+  },
+  TIMEOUT: {
+    title: 'Délai dépassé',
+    message: "L'hyperviseur n'a pas répondu à temps. Réessayez dans un instant.",
+  },
 };
 
 /** L'API répond { status, content } en cas d'erreur (voir common.rs). */
@@ -57,6 +66,7 @@ export class HypervisorApiErrorMapper implements ErrorMapper {
       };
     }
 
+    // 502 / 504 / 409 portent un corps { status, content } : l'API a bien répondu.
     const code = this.businessCode(error.status);
     if (code) {
       return { kind: 'business', ...origin, code, title: CATALOG[code].title, message: CATALOG[code].message };
@@ -81,8 +91,12 @@ export class HypervisorApiErrorMapper implements ErrorMapper {
         return 'NOT_FOUND';
       case 501:
         return 'NOT_IMPLEMENTED';
+      case 409:
+        return 'CONFLICT';
       case 502:
         return 'HYPERVISOR_UNREACHABLE';
+      case 504:
+        return 'TIMEOUT';
       default:
         return null;
     }

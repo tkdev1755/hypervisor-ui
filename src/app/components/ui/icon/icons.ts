@@ -9,6 +9,7 @@ export const ICONS = {
   cpu: ['M7 7h10v10H7z', 'M10 10h4v4h-4z', 'M9 3v4M15 3v4M9 17v4M15 17v4M3 9h4M3 15h4M17 9h4M17 15h4'],
   disk: ['M3 15h18v5H3z', 'M5.5 6.5 3 15h18l-2.5-8.5A2 2 0 0 0 16.6 5H7.4a2 2 0 0 0-1.9 1.5z', 'M7 17.5h.01'],
   network: ['M9 3h6v6H9z', 'M3 15h6v6H3z', 'M15 15h6v6h-6z', 'M12 9v3M6 15v-3h12v3'],
+  terminal: ['M3 4h18v16H3z', 'M7 9l3 3-3 3', 'M12 15h5'],
   plus: ['M12 5v14M5 12h14'],
   minus: ['M5 12h14'],
   play: ['M7 4.5v15l12-7.5z'],

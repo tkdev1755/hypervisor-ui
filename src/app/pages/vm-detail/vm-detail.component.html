@@ -1,0 +1,53 @@
+@if (vm(); as vm) {
+  <app-page
+    [backLink]="'/hypervisors/' + id()"
+    [backLabel]="hypervisor()?.name ?? 'Hyperviseur'"
+    eyebrow="Machine virtuelle"
+    [title]="vm.name"
+    [subtitle]="vm.id"
+  >
+    <app-status-badge actions [status]="vm.status" />
+    <ng-container actions>
+      @if (vm.status === 'running') {
+        <app-button variant="ghost" icon="terminal" (pressed)="console(vm)">Console</app-button>
+        <app-button variant="ghost" icon="stop" [loading]="busy()" (pressed)="stop()">Arrêter</app-button>
+        <app-button variant="danger-ghost" icon="stop" (pressed)="forceStop(vm)">Forcer l'arrêt</app-button>
+      } @else {
+        <app-button icon="play" [loading]="busy()" (pressed)="start()">Démarrer</app-button>
+        <app-button variant="ghost" icon="copy" (pressed)="clone(vm)">Cloner</app-button>
+        <app-button variant="danger-ghost" icon="trash" (pressed)="remove(vm)">Supprimer</app-button>
+      }
+    </ng-container>
+
+    @if (actionError(); as actionError) {
+      <app-error-panel [error]="actionError" />
+    }
+
+    <app-grid [minItemWidth]="200">
+      <app-card>
+        <app-column [gap]="4">
+          <app-text variant="eyebrow">vCPU</app-text>
+          <app-text variant="title">{{ vm.vcpus }}</app-text>
+        </app-column>
+      </app-card>
+      <app-card>
+        <app-column [gap]="4">
+          <app-text variant="eyebrow">Mémoire</app-text>
+          <app-text variant="title">{{ memory(vm) }}</app-text>
+        </app-column>
+      </app-card>
+      <app-card>
+        <app-column [gap]="4">
+          <app-text variant="eyebrow">Hyperviseur</app-text>
+          <app-text variant="title">{{ hypervisor()?.name ?? '…' }}</app-text>
+        </app-column>
+      </app-card>
+    </app-grid>
+  </app-page>
+} @else if (error(); as error) {
+  <app-page [backLink]="'/hypervisors/' + id()" backLabel="Hyperviseur" title="Machine virtuelle">
+    <app-error-panel [error]="error" [retryable]="true" (retry)="load()" />
+  </app-page>
+} @else {
+  <app-loading label="Chargement de la VM…" />
+}

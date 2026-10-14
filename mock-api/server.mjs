@@ -13,9 +13,10 @@
 import { createServer } from 'node:http';
 import { randomUUID } from 'node:crypto';
 
-const PORT = 3000;
+const PORT = Number(process.env.PORT ?? 3000);
 const FULL = process.env.MOCK_FULL === '1';
 
+const jobs = new Map(); // jobId -> Job (les tâches de clonage)
 const hypervisors = new Map();
 const vms = new Map(); // hypervisorId -> VM[]
 
@@ -63,6 +64,17 @@ const server = createServer(async (req, res) => {
   if (url.pathname === '/ping' && method === 'GET') {
     return send(res, 200, message('ok', 'pong'));
   }
+  // Une fausse page « noVNC », ouverte par la console de l'interface (mode full).
+  if (url.pathname === '/mock-novnc' && method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    return res.end('<body style="margin:0;background:#111;color:#7CFC00;font:16px monospace;padding:16px">'
+      + `Fausse console VNC (mock)<br>VM : ${url.searchParams.get('token')}<br><br>debian login: _</body>`);
+  }
+  // GET /api/jobs/{id}
+  if (parts[0] === 'api' && parts[1] === 'jobs' && parts[2] && method === 'GET') {
+    const job = jobs.get(parts[2]);
+    return job ? send(res, 200, job) : send(res, 404, message('error', 'Job not found'));
+  }
   if (parts[0] !== 'api' || parts[1] !== 'hypervisors') {
     return send(res, 404, message('error', 'Route not found'));
   }
@@ -105,22 +117,66 @@ const server = createServer(async (req, res) => {
   }
   if (!hypervisor) return notFound(res);
 
+  if (resource === 'vm-options' && method === 'GET') {
+    return send(res, 200, {
+      storage_pools: [
+        { name: 'datastore', capacity_gb: 500, available_gb: 320, volumes: [] },
+        { name: 'images', capacity_gb: 200, available_gb: 150, volumes: [{ name: 'debian.iso', format: 'iso', size_mb: 650, kind: 'iso', used_by: [] }] },
+      ],
+      networks: [{ name: 'default', bridge: 'virbr0' }, { name: 'isolated' }],
+      firmware: ['bios', 'uefi'],
+      limits: { memory_mb: { min: 128, max: 16384 }, vcpus: { min: 1, max: 8 }, disk_gb: { min: 1, max: 500 } },
+      defaults: { network: 'default', firmware: 'bios', memory_mb: 2048, vcpus: 2, disk_gb: 20 },
+    });
+  }
   if (resource === 'vms') {
     const list = vms.get(id) ?? [];
     if (!subId && method === 'GET') return send(res, 200, list);
     if (!subId && method === 'POST') {
       const body = await readJson(req);
-      const vm = { id: randomUUID(), hypervisor_id: id, name: body.name, memory_mb: body.memory_mb, vcpus: body.vcpus, status: 'shutoff' };
+      if (!body?.name || !body?.disks?.length) return send(res, 400, message('error', 'At least one disk or an ISO is required'));
+      if (list.some((candidate) => candidate.name === body.name)) return send(res, 409, message('error', 'VM name already taken'));
+      const vm = { id: randomUUID(), hypervisor_id: id, name: body.name, memory_mb: body.memory_mb, vcpus: body.vcpus, status: body.start ? 'running' : 'shutoff' };
       list.push(vm);
       return send(res, 201, vm);
     }
     const vm = list.find((candidate) => candidate.id === subId);
     if (!vm) return send(res, 404, message('error', 'VM not found'));
     if (method === 'POST' && (action === 'start' || action === 'stop')) {
+      if ((action === 'start') === (vm.status === 'running')) return send(res, 409, message('error', `VM already ${vm.status}`));
       vm.status = action === 'start' ? 'running' : 'shutoff';
-      return send(res, 200, message('ok', `VM ${action}ed`));
+      // Le vrai arrêt ACPI (sans ?force=true) est asynchrone : l'état renvoyé peut encore être « running ».
+      if (action === 'stop' && url.searchParams.get('force') !== 'true') {
+        const before = { ...vm, status: 'running' };
+        return send(res, 200, before);
+      }
+      return send(res, 200, vm);
+    }
+    if (method === 'POST' && action === 'clone') {
+      const body = await readJson(req);
+      if (vm.status === 'running') return send(res, 409, message('error', 'The source VM must be stopped'));
+      if (!body?.name) return send(res, 422, 'Failed to deserialize the JSON body');
+      if (list.some((candidate) => candidate.name === body.name)) return send(res, 409, message('error', 'VM name already taken'));
+      const job = { id: randomUUID(), kind: 'clone', status: 'running' };
+      jobs.set(job.id, job);
+      // La « copie des disques » dure 3 secondes.
+      setTimeout(() => {
+        const copy = { ...vm, id: randomUUID(), name: body.name, status: 'shutoff' };
+        list.push(copy);
+        Object.assign(job, { status: 'succeeded', result: copy });
+      }, 3000);
+      res.setHeader('Location', `/api/jobs/${job.id}`);
+      return send(res, 202, job);
+    }
+    if (method === 'GET' && action === 'vnc') {
+      if (vm.status !== 'running') return send(res, 409, message('error', 'The VM is not running'));
+      return send(res, 200, {
+        hypervisor_id: id, vm_id: vm.id, uuid: vm.id, host: '127.0.0.1', port: '5900', token: vm.id, status: 'connected',
+        novnc_url: `http://127.0.0.1:${PORT}/mock-novnc?token=${vm.name}`,
+      });
     }
     if (method === 'DELETE') {
+      if (vm.status === 'running') return send(res, 409, message('error', 'The VM is running'));
       vms.set(id, list.filter((candidate) => candidate.id !== subId));
       return send(res, 204);
     }

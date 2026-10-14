@@ -4,23 +4,27 @@ import { Observable } from 'rxjs';
 import { ColumnComponent } from '@app/components/layout/column/column.component';
 import { RowComponent } from '@app/components/layout/row/row.component';
 import { SpacerComponent } from '@app/components/layout/spacer/spacer.component';
-import { ConfirmModalComponent } from '@app/components/modal/confirm-modal/confirm-modal.component';
 import { ButtonComponent } from '@app/components/ui/button/button.component';
+import { ConfirmModalComponent } from '@app/components/modal/confirm-modal/confirm-modal.component';
 import { EmptyStateComponent } from '@app/components/ui/empty-state/empty-state.component';
 import { ErrorPanelComponent } from '@app/components/ui/error-panel/error-panel.component';
 import { ListTileComponent } from '@app/components/ui/list-tile/list-tile.component';
 import { ListComponent } from '@app/components/ui/list/list.component';
 import { LoadingComponent } from '@app/components/ui/loading/loading.component';
 import { TextComponent } from '@app/components/ui/text/text.component';
+import { VmCloneModalComponent } from '@app/components/vm-clone-modal/vm-clone-modal.component';
+import { VmConsoleModalComponent } from '@app/components/vm-console-modal/vm-console-modal.component';
+import { VmDeleteModalComponent } from '@app/components/vm-delete-modal/vm-delete-modal.component';
 import { VmFormModalComponent } from '@app/components/vm-form-modal/vm-form-modal.component';
 import { AppError } from '@app/models/app-error.model';
 import { VirtualMachine } from '@app/models/virtual-machine.model';
+import { InventoryService } from '@app/services/inventory.service';
 import { ModalService } from '@app/services/modal.service';
 import { VmService } from '@app/services/vm.service';
 
 /**
- * Les VM d'un hyperviseur : une liste avec démarrage, arrêt et suppression.
- * Tant que l'API répond 501 sur ces routes, la page affiche « Pas encore disponible ».
+ * Les VM d'un hyperviseur : une liste avec démarrage, arrêt, console VNC
+ * (VM en marche), clonage et suppression (VM arrêtée).
  */
 @Component({
   selector: 'app-vm-list',
@@ -42,6 +46,7 @@ import { VmService } from '@app/services/vm.service';
 export class VmListComponent implements OnInit {
   private readonly vms = inject(VmService);
   private readonly modal = inject(ModalService);
+  private readonly inventory = inject(InventoryService);
 
   readonly hypervisorId = input.required<string>();
   readonly hypervisorName = input('');
@@ -85,6 +90,27 @@ export class VmListComponent implements OnInit {
     this.runAction(vm, this.vms.stop(this.hypervisorId(), vm.id));
   }
 
+  /** Coupe l'alimentation de la VM (comme débrancher une machine) : on demande confirmation. */
+  protected forceStop(vm: VirtualMachine): void {
+    this.modal
+      .open<ConfirmModalComponent, boolean>(ConfirmModalComponent, {
+        size: 'sm',
+        inputs: {
+          title: `Forcer l'arrêt de « ${vm.name} » ?`,
+          message: "L'alimentation est coupée immédiatement : les données non enregistrées dans la VM sont perdues.",
+          confirmLabel: "Forcer l'arrêt",
+          successMessage: 'VM arrêtée.',
+          danger: true,
+          action: () => this.vms.stop(this.hypervisorId(), vm.id, true),
+        },
+      })
+      .afterClosed$.subscribe((stopped) => {
+        if (stopped) {
+          this.changed();
+        }
+      });
+  }
+
   protected create(): void {
     this.modal
       .open<VmFormModalComponent, VirtualMachine>(VmFormModalComponent, {
@@ -92,29 +118,48 @@ export class VmListComponent implements OnInit {
       })
       .afterClosed$.subscribe((vm) => {
         if (vm) {
-          this.load();
+          this.changed();
         }
       });
   }
 
+  /** Cloner : la VM source doit être arrêtée (sinon l'API répond 409). */
+  protected clone(vm: VirtualMachine): void {
+    this.modal
+      .open<VmCloneModalComponent, VirtualMachine>(VmCloneModalComponent, {
+        inputs: { hypervisorId: this.hypervisorId(), source: vm },
+      })
+      .afterClosed$.subscribe((clone) => {
+        if (clone) {
+          this.changed();
+        }
+      });
+  }
+
+  protected console(vm: VirtualMachine): void {
+    this.modal.open<VmConsoleModalComponent, void>(VmConsoleModalComponent, {
+      size: 'screen',
+      inputs: { hypervisorId: this.hypervisorId(), vm },
+    });
+  }
+
   protected remove(vm: VirtualMachine): void {
     this.modal
-      .open<ConfirmModalComponent, boolean>(ConfirmModalComponent, {
+      .open<VmDeleteModalComponent, boolean>(VmDeleteModalComponent, {
         size: 'sm',
-        inputs: {
-          title: `Supprimer « ${vm.name} » ?`,
-          message: 'La machine virtuelle sera supprimée de l’hyperviseur.',
-          confirmLabel: 'Supprimer',
-          successMessage: 'VM supprimée.',
-          danger: true,
-          action: () => this.vms.delete(this.hypervisorId(), vm.id),
-        },
+        inputs: { hypervisorId: this.hypervisorId(), vm },
       })
       .afterClosed$.subscribe((deleted) => {
         if (deleted) {
-          this.load();
+          this.changed();
         }
       });
+  }
+
+  /** Après un changement : recharger la liste, et l'inventaire de la barre latérale. */
+  private changed(): void {
+    this.load();
+    this.inventory.refresh();
   }
 
   private runAction(vm: VirtualMachine, request: Observable<unknown>): void {
@@ -123,7 +168,7 @@ export class VmListComponent implements OnInit {
     request.subscribe({
       next: () => {
         this.busyId.set(null);
-        this.load();
+        this.changed();
       },
       error: (error: AppError) => {
         this.busyId.set(null);

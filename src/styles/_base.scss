@@ -46,13 +46,6 @@ pre {
   box-shadow: var(--shadow-sm);
 }
 
-// Empile ses enfants avec un espacement régulier.
-.stack {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
 // Petit libellé en majuscules au-dessus d'un titre.
 .eyebrow {
   font-size: 0.75rem;
@@ -101,11 +94,7 @@ pre {
 
 // --- Animations ---------------------------------------------------------------
 
-// Utilisée par la directive appFadeIn.
-.app-fade-in {
-  animation: fade-in 320ms var(--ease) both;
-}
-
+// Apparition en fondu (utilisée par resource-card).
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -116,6 +105,14 @@ pre {
 // Ouverture et fermeture des modales (classes posées par ModalService).
 .app-modal-panel {
   animation: modal-in 200ms var(--ease) both;
+}
+// Le contenu de la modale prend toute la hauteur permise par le panneau (voir ModalService) :
+// seul le corps de la modale défile quand le formulaire est trop long.
+.app-modal-panel > * {
+  display: flex !important;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
 }
 .app-modal-panel.is-closing {
   animation: modal-out 180ms var(--ease) both;

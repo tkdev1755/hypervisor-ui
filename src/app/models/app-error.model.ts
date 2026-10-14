@@ -23,7 +23,7 @@ export interface ErrorOrigin {
   status: number;
 }
 
-export type BusinessErrorCode = 'NOT_FOUND' | 'NOT_IMPLEMENTED' | 'HYPERVISOR_UNREACHABLE' | 'INVALID_REQUEST';
+export type BusinessErrorCode = 'NOT_FOUND' | 'NOT_IMPLEMENTED' | 'HYPERVISOR_UNREACHABLE' | 'INVALID_REQUEST' | 'CONFLICT' | 'TIMEOUT';
 
 /** « extends ErrorOrigin » : BusinessError a tous les champs de ErrorOrigin, plus les siens. */
 export interface BusinessError extends ErrorOrigin {
