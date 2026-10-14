@@ -75,7 +75,7 @@ src/app/
 │   ├── ui/               text, inline-code, button, icon (+ icons.ts), status-badge, text-field, choice-cards,
 │   │                     tabs, code-block, error-panel, loading, empty-state, list, list-tile, resource-card, callout, frame, number-field
 │   ├── modal/            modal-shell (cadre + états), confirm-modal
-│   ├── lessons/          lesson (cadre), hello-card, demo-vm-card, lesson-01 à lesson-10 (noms explicites)
+│   ├── lessons/          lesson (cadre), hello-card, demo-vm-card, demo-rename-modal, lesson-xxx (17 leçons, noms explicites)
 │   ├── shell/            barre latérale (+ sidebar-inventory : arbre hyperviseurs → VM) + <router-outlet>
 │   └── hypervisor-form-modal, vm-form-modal, vm-clone-modal, vm-delete-modal,
 │                         vm-console-modal, vm-list, disk-list, network-list   (composants métier)
@@ -164,6 +164,15 @@ mainteneur a conçue en entreprise. Respectez leur contrat.
 - **Sass** : Bootstrap utilise encore `@import` ; les avertissements sont
   réduits au silence dans `angular.json` (`silenceDeprecations`). N'y ajoutez
   pas `mixed-decls` (obsolète, provoque un avertissement).
+- **Leçons avancées (11 à 17)** : leurs démos utilisent les vrais services
+  (`ModalService`, `ContextBridgeService`, `Router`, les jetons d'injection)
+  mais **ne doivent jamais modifier quoi que ce soit côté API** : modales
+  simulées avec `timer` / `throwError`, ContextBridge avec un identifiant
+  fictif (`demo-lecon`) dont seul le `GET` part (404 attendu). Gardez cette
+  règle pour toute nouvelle leçon : le port 3000 peut être la vraie API.
+- **Leçons : code d'exemple** : l'exemple est une chaîne TypeScript
+  (backticks) ; n'y mettez ni backtick ni `${`. Dans le `.html`, les
+  commentaires `<!-- -->` ne vont pas à l'intérieur d'une balise.
 - **Budget** : le bundle initial fait ~545 ko bruts (~110 ko transférés),
   surtout les utilitaires Bootstrap ; le budget est réglé à 700 ko.
 

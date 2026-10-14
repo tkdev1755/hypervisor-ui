@@ -6,7 +6,9 @@ machines virtuelles, disques et réseaux, en appelant hypervisor-api (Rust, Axum
 Angular 21 · Bootstrap 5 · Angular CDK (modales).
 
 > **Jamais fait d'Angular ni de TypeScript ?** Lancez le projet et ouvrez la page
-> **Apprendre** : dix leçons courtes, avec le code et son résultat en direct.
+> **Apprendre** : dix-sept leçons courtes, avec le code et son résultat en direct
+> (les dix premières pour les bases, une partie « Avancé » pour le routage, les
+> modales, le ContextBridge, les signals avancés, RxJS et l'injection).
 > Ensuite, lisez [GUIDE.md](GUIDE.md).
 
 ## Démarrer
@@ -126,11 +128,11 @@ Quatre briques, reprises d'un projet en production :
 3. **Le ContextBridge** (`services/context-bridge.service.ts`) : passer une
    donnée d'une page à l'autre sans la recopier dans l'adresse.
    `prime('hypervisor', id, h)` la range, `resolve('hypervisor', id)` la relit,
-   depuis l'API si besoin.
+   depuis l'API si besoin. Leçon 14 de la page Apprendre.
 4. **Les modales** (`services/modal.service.ts`, `components/modal/`) :
    `this.modal.open(MaModaleComponent, { inputs: { ... } })`. Le cadre
    `<app-modal-shell>` gère les états formulaire → chargement → succès / erreur,
-   et empêche de fermer la modale pendant un chargement.
+   et empêche de fermer la modale pendant un chargement. Leçons 12 et 13.
 
 ## Le design system
 

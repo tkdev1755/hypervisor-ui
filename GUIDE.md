@@ -1,6 +1,6 @@
 # Guide pour débuter
 
-Ce guide complète la page **Apprendre** de l'application (dix leçons avec le
+Ce guide complète la page **Apprendre** de l'application (dix-sept leçons avec le
 résultat en direct). Commencez par les leçons, puis revenez ici pour les
 recettes et les exercices.
 
@@ -17,6 +17,13 @@ recettes et les exercices.
 | **inject()** | La façon d'obtenir un service dans un composant. |
 | **Observable** | Une réponse qui arrivera plus tard (un appel HTTP) ; `.subscribe()` dit quoi faire à son arrivée. |
 | **Route** | L'association d'une adresse (`/hypervisors`) et d'une page. |
+| **Paramètre d'adresse** | Une partie variable de l'adresse (`:id`), reçue par la page dans un `input()` du même nom (leçon 11). |
+| **ModalRef** | La « télécommande » d'une modale ouverte : `close(résultat)` pour la fermer, `afterClosed$` pour récupérer le résultat (leçons 12 et 13). |
+| **ContextBridge** | Un cache en mémoire pour passer une donnée d'une page à l'autre : `prime`, `peek`, `resolve`, `invalidate` (leçon 14). |
+| **linkedSignal / effect** | Une valeur calculée mais modifiable / une action déclenchée par un changement de signal (leçon 15). |
+| **Opérateur RxJS** | Une étape de `.pipe(...)` qui transforme un Observable : `switchMap`, `filter`, `take`… (leçon 16). |
+| **InjectionToken** | Un « nom » pour injecter autre chose qu'une classe, par exemple une liste de mappers d'erreurs (leçon 17). |
+| **Générique** | Un type paramétré (`<K extends ContextType>`) qui s'adapte à ce qu'on lui donne (leçon 17). |
 
 ## 2. Lire un écran
 
@@ -115,6 +122,9 @@ readonly erreurNom = computed(() => (this.nom() === '' ? 'Le nom est obligatoire
 ```
 
 ### Ouvrir une modale
+
+> Le principe complet, avec une modale d'exemple à essayer : leçons 12 et 13
+> de la page Apprendre (partie « Avancé »).
 
 1. Créez le composant de la modale, avec `<app-modal-shell>` et un signal
    `state` (`'form' | 'loading' | 'success' | 'error'`). Modèle :
