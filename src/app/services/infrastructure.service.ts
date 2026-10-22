@@ -35,4 +35,8 @@ export class InfrastructureService {
   createNetwork(hypervisorId: string, body: NetworkRequest): Observable<Network> {
     return this.http.post<Network>(`/api/hypervisors/${hypervisorId}/networks`, body, { context: this.context });
   }
+
+  deleteNetwork(hypervisorId: string, networkId: string): Observable<void> {
+    return this.http.delete<void>(`/api/hypervisors/${hypervisorId}/networks/${networkId}`, { context: this.context });
+  }
 }

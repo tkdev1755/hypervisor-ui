@@ -19,6 +19,7 @@ const FULL = process.env.MOCK_FULL === '1';
 const jobs = new Map(); // jobId -> Job (les tâches de clonage)
 const hypervisors = new Map();
 const vms = new Map(); // hypervisorId -> VM[]
+const networks = new Map(); // hypervisorId -> Network[]
 
 function addHypervisor(name, uri) {
   const hypervisor = { id: randomUUID(), name, uri, status: uri.includes('offline') ? 'disconnected' : 'connected' };
@@ -26,6 +27,10 @@ function addHypervisor(name, uri) {
   vms.set(hypervisor.id, [
     { id: randomUUID(), hypervisor_id: hypervisor.id, name: 'web-01', memory_mb: 4096, vcpus: 2, status: 'running' },
     { id: randomUUID(), hypervisor_id: hypervisor.id, name: 'db-01', memory_mb: 8192, vcpus: 4, status: 'shutoff' },
+  ]);
+  networks.set(hypervisor.id, [
+    { id: 'n1', hypervisor_id: hypervisor.id, name: 'default', bridge: 'virbr0', status: 'active' },
+    { id: 'n2', hypervisor_id: hypervisor.id, name: 'isolated', bridge: null, status: 'inactive' },
   ]);
   return hypervisor;
 }
@@ -189,10 +194,22 @@ const server = createServer(async (req, res) => {
     ]);
   }
   if (resource === 'networks' && method === 'GET') {
-    return send(res, 200, [
-      { id: 'n1', hypervisor_id: id, name: 'default', bridge: 'virbr0', status: 'active' },
-      { id: 'n2', hypervisor_id: id, name: 'isolated', bridge: null, status: 'inactive' },
-    ]);
+    return send(res, 200, networks.get(id) ?? []);
+  }
+  if (resource === 'networks' && method === 'POST') {
+    if (!FULL) return notImplemented(res, 'networks POST');
+    const body = await readJson(req);
+    if (!body?.name) return send(res, 422, 'Failed to deserialize the JSON body');
+    const network = { id: randomUUID(), hypervisor_id: id, name: body.name, bridge: body.bridge ?? null, status: 'inactive' };
+    networks.set(id, [...(networks.get(id) ?? []), network]);
+    return send(res, 201, network);
+  }
+  if (resource === 'networks' && subId && method === 'DELETE') {
+    if (!FULL) return notImplemented(res, 'networks DELETE');
+    const list = networks.get(id) ?? [];
+    if (!list.some((network) => network.id === subId)) return send(res, 404, message('error', 'Network not found'));
+    networks.set(id, list.filter((network) => network.id !== subId));
+    return send(res, 204);
   }
   return notImplemented(res, `${resource} ${method}`);
 });
