@@ -20,6 +20,7 @@ const jobs = new Map(); // jobId -> Job (les tâches de clonage)
 const hypervisors = new Map();
 const vms = new Map(); // hypervisorId -> VM[]
 const networks = new Map(); // hypervisorId -> Network[]
+const disks = new Map(); // hypervisorId -> Disk[]
 
 function addHypervisor(name, uri) {
   const hypervisor = { id: randomUUID(), name, uri, status: uri.includes('offline') ? 'disconnected' : 'connected' };
@@ -31,6 +32,10 @@ function addHypervisor(name, uri) {
   networks.set(hypervisor.id, [
     { id: 'n1', hypervisor_id: hypervisor.id, name: 'default', bridge: 'virbr0', status: 'active' },
     { id: 'n2', hypervisor_id: hypervisor.id, name: 'isolated', bridge: null, status: 'inactive' },
+  ]);
+  disks.set(hypervisor.id, [
+    { id: 'd1', hypervisor_id: hypervisor.id, name: 'web-01.qcow2', size_gb: 20, format: 'qcow2' },
+    { id: 'd2', hypervisor_id: hypervisor.id, name: 'db-01.raw', size_gb: 100, format: 'raw' },
   ]);
   return hypervisor;
 }
@@ -188,10 +193,24 @@ const server = createServer(async (req, res) => {
     if (method === 'GET') return send(res, 200, vm);
   }
   if (resource === 'disks' && method === 'GET') {
-    return send(res, 200, [
-      { id: 'd1', hypervisor_id: id, name: 'web-01.qcow2', size_gb: 20, format: 'qcow2' },
-      { id: 'd2', hypervisor_id: id, name: 'db-01.raw', size_gb: 100, format: 'raw' },
-    ]);
+    return send(res, 200, disks.get(id) ?? []);
+  }
+  if (resource === 'disks' && method === 'POST') {
+    if (!FULL) return notImplemented(res, 'disks POST');
+    const body = await readJson(req);
+    if (!body?.name || !Number.isInteger(body.size_gb) || body.size_gb < 1 || !['qcow2', 'raw'].includes(body.format)) {
+      return send(res, 422, 'Failed to deserialize the JSON body');
+    }
+    const disk = { id: randomUUID(), hypervisor_id: id, ...body };
+    disks.set(id, [...(disks.get(id) ?? []), disk]);
+    return send(res, 201, disk);
+  }
+  if (resource === 'disks' && subId && method === 'DELETE') {
+    if (!FULL) return notImplemented(res, 'disks DELETE');
+    const list = disks.get(id) ?? [];
+    if (!list.some((disk) => disk.id === subId)) return send(res, 404, message('error', 'Disk not found'));
+    disks.set(id, list.filter((disk) => disk.id !== subId));
+    return send(res, 204);
   }
   if (resource === 'networks' && method === 'GET') {
     return send(res, 200, networks.get(id) ?? []);
