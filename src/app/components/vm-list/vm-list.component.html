@@ -15,7 +15,7 @@
   } @else {
     <app-list>
       @for (vm of list(); track vm.id) {
-        <app-list-tile icon="cpu" [title]="vm.name" [subtitle]="describe(vm)" [status]="vm.status">
+        <app-list-tile icon="cpu" [title]="vm.name" [subtitle]="describe(vm)" [status]="vm.status" [clickable]="true" (tap)="details(vm)">
           @if (vm.status === 'running') {
             <app-button variant="ghost" size="sm" icon="terminal" (pressed)="console(vm)">Console</app-button>
             <app-button variant="ghost" size="sm" icon="stop" [loading]="busyId() === vm.id" (pressed)="stop(vm)">Arrêter</app-button>

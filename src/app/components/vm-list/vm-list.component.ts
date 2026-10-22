@@ -1,4 +1,5 @@
 import { Component, OnInit, inject, input, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
 
 import { ColumnComponent } from '@app/components/layout/column/column.component';
@@ -47,6 +48,7 @@ export class VmListComponent implements OnInit {
   private readonly vms = inject(VmService);
   private readonly modal = inject(ModalService);
   private readonly inventory = inject(InventoryService);
+  private readonly router = inject(Router);
 
   readonly hypervisorId = input.required<string>();
   readonly hypervisorName = input('');
@@ -88,6 +90,10 @@ export class VmListComponent implements OnInit {
 
   protected stop(vm: VirtualMachine): void {
     this.runAction(vm, this.vms.stop(this.hypervisorId(), vm.id));
+  }
+
+  protected details(vm: VirtualMachine): void {
+    this.router.navigate(['/hypervisors', this.hypervisorId(), 'vms', vm.id]);
   }
 
   /** Coupe l'alimentation de la VM (comme débrancher une machine) : on demande confirmation. */
