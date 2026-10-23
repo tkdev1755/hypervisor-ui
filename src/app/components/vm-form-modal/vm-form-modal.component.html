@@ -10,10 +10,12 @@
 >
   <app-column [gap]="16">
     <app-text-field label="Nom" placeholder="web-01" [(value)]="name" [error]="nameError()" (enter)="submit()" />
+
     <app-column [gap]="6">
       <app-text variant="small" weight="medium">Gabarit</app-text>
       <app-choice-cards label="Gabarit" [options]="presets" [value]="preset()" (valueChange)="applyPreset($event)" />
     </app-column>
+
     <app-row [gap]="24" [wrap]="true">
       <app-number-field label="vCPU" [(value)]="vcpus" [min]="options()?.limits?.vcpus?.min ?? 1" [max]="options()?.limits?.vcpus?.max ?? 64" />
       <app-number-field
@@ -25,26 +27,58 @@
         [max]="options()?.limits?.memory_mb?.max ?? 262144"
       />
     </app-row>
+
+    <!-- Configuration du disque -->
     <app-column [gap]="6">
-      <app-text variant="small" weight="medium">Stockage du disque</app-text>
-      <app-choice-cards label="Pool de stockage" [columns]="2" [options]="pools()" [(value)]="pool" />
-      @if (poolError(); as poolError) {
-        <app-text variant="small" color="danger">{{ poolError }}</app-text>
-      }
+      <app-text variant="small" weight="medium">Mode de disque</app-text>
+      <app-choice-cards label="Mode de disque" [columns]="3" [options]="diskModeChoices" [(value)]="diskMode" />
     </app-column>
-    <app-text-field label="Taille du disque (Go)" type="number" [(value)]="diskGb" [error]="diskError()" />
+
+    @if (diskMode() !== 'none') {
+      <app-column [gap]="6">
+        <app-text variant="small" weight="medium">Pool de stockage</app-text>
+        <app-choice-cards label="Pool de stockage" [columns]="2" [options]="pools()" [(value)]="pool" />
+        @if (poolError(); as poolError) {
+          <app-text variant="small" color="danger">{{ poolError }}</app-text>
+        }
+      </app-column>
+
+      @if (diskMode() === 'new') {
+        <app-text-field label="Taille du disque (Go)" type="number" [(value)]="diskGb" [error]="diskError()" />
+      } @else if (diskMode() === 'existing') {
+        <app-column [gap]="6">
+          <app-text variant="small" weight="medium">Volume existant</app-text>
+          @if (availableVolumes().length === 0) {
+            <app-text variant="small" color="muted">Aucun volume libre dans ce pool.</app-text>
+          } @else {
+            <app-choice-cards label="Volume existant" [columns]="2" [options]="availableVolumes()" [(value)]="existingVolume" />
+          }
+          @if (diskError(); as diskErr) {
+            <app-text variant="small" color="danger">{{ diskErr }}</app-text>
+          }
+        </app-column>
+      }
+    } @else {
+      @if (diskError(); as diskErr) {
+        <app-text variant="small" color="danger">{{ diskErr }}</app-text>
+      }
+    }
+
     <app-column [gap]="6">
       <app-text variant="small" weight="medium">ISO d'installation (démarrée en premier)</app-text>
       <app-choice-cards label="ISO" [columns]="2" [options]="isos()" [(value)]="iso" />
     </app-column>
+
     <app-column [gap]="6">
       <app-text variant="small" weight="medium">Réseau</app-text>
       <app-choice-cards label="Réseau" [columns]="2" [options]="networks()" [(value)]="network" />
     </app-column>
+
     <app-column [gap]="6">
       <app-text variant="small" weight="medium">Firmware</app-text>
       <app-choice-cards label="Firmware" [columns]="2" [options]="firmwares()" [(value)]="firmware" />
     </app-column>
+
     <app-column [gap]="6">
       <app-text variant="small" weight="medium">Démarrer après la création</app-text>
       <app-choice-cards label="Démarrer après la création" [columns]="2" [options]="startChoices" [(value)]="start" />
