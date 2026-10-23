@@ -1,6 +1,6 @@
 # Guide pour débuter
 
-Ce guide complète la page **Apprendre** de l'application (dix-sept leçons avec le
+Ce guide complète la page **Apprendre** de l'application (dix-huit leçons avec le
 résultat en direct). Commencez par les leçons, puis revenez ici pour les
 recettes et les exercices.
 
@@ -23,6 +23,8 @@ recettes et les exercices.
 | **linkedSignal / effect** | Une valeur calculée mais modifiable / une action déclenchée par un changement de signal (leçon 15). |
 | **Opérateur RxJS** | Une étape de `.pipe(...)` qui transforme un Observable : `switchMap`, `filter`, `take`… (leçon 16). |
 | **InjectionToken** | Un « nom » pour injecter autre chose qu'une classe, par exemple une liste de mappers d'erreurs (leçon 17). |
+| **Jeton (access / refresh)** | La « clé » donnée à la connexion : l'access token (15 min) accompagne chaque requête, le refresh token (usage unique) en fournit un nouveau (leçon 18). |
+| **Garde de route** | Une fonction qui autorise ou refuse l'affichage d'une page : `authGuard` (connecté), `adminGuard` (administrateur). |
 | **Générique** | Un type paramétré (`<K extends ContextType>`) qui s'adapte à ce qu'on lui donne (leçon 17). |
 
 ## 2. Lire un écran
@@ -156,10 +158,11 @@ Du plus simple au plus complet. Travaillez avec `npm run mock:full`.
 1. **Changer un texte** : modifiez le sous-titre de la page Hyperviseurs.
 2. **Afficher un total** : sous la liste des disques, la taille totale avec un
    `computed()` et un `<app-text>`.
-3. **Créer un disque** : une modale sur le modèle de `vm-form-modal`, le format
-   choisi par `<app-choice-cards>` (qcow2 / raw), et
+3. **Créer un disque** *(fait sur la branche `infra`, à relire)* : une modale sur le modèle de
+   `vm-form-modal`, le format choisi par `<app-choice-cards>` (qcow2 / raw), et
    `InfrastructureService.createDisk`.
-4. **Créer un réseau** : nom et bridge facultatif, avec `createNetwork`.
+4. **Créer un réseau** *(fait sur la branche `infra`, à relire)* : nom et bridge facultatif, avec
+   `createNetwork`. Reste à refaire : la suppression, quand l'API aura sa route.
 5. **Filtrer les VM** : un `<app-text-field>` au-dessus de la liste, un
    `signal()` pour le texte et un `computed()` pour la liste filtrée.
 6. **Cloner une VM** : un bouton dans chaque ligne, une modale qui demande le

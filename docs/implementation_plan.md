@@ -1,6 +1,6 @@
 # Plan d'implémentation — Hypervisor UI
 
-> État au 14 octobre 2026. À tenir à jour à chaque étape terminée (cocher,
+> État au 23 octobre 2026. À tenir à jour à chaque étape terminée (cocher,
 > dater, noter les écarts). Contexte et règles : [../CLAUDE.md](../CLAUDE.md).
 
 ## 1. Ce qui est fait
@@ -22,7 +22,7 @@
 
 ### Écrans
 
-- [x] Accueil, page Apprendre (17 leçons : TypeScript, Angular, mise en page, et une partie « Avancé »).
+- [x] Accueil, page Apprendre (18 leçons : TypeScript, Angular, mise en page, et une partie « Avancé »).
 - [x] Hyperviseurs : liste, ajout, modification, suppression.
 - [x] Détail d'un hyperviseur : onglets VM (liste, démarrage, arrêt,
       suppression, création), disques et réseaux (lecture).
@@ -62,11 +62,48 @@
 - [ ] Reste à couvrir si l'équipe bloque : formulaires et validation (partiellement
       couverts par la leçon 13), `@defer`, tests unitaires.
 
+### Authentification, rôles, prêt de VM et quotas (23 octobre 2026, branche `auth`)
+
+Alignement sur l'API (branche `auth` de hypervisor-api : JWT + refresh token, rôles, prêt, quotas, audit ;
+référence : `docs/AUTH.md` et `docs/HANDOFF_FRONT.md` dans son dépôt).
+
+- [x] `AuthService` (connexion, déconnexion, refresh partagé, session rouverte au rechargement),
+      `authInterceptor` placé avant `errorInterceptor`, `authGuard` / `adminGuard`, page `/login`
+      (avec inscription si `GET /api/auth/config` l'autorise), `/account` (rôle, quota, mot de passe).
+- [x] Erreurs : `SESSION_EXPIRED` (401), `INVALID_CREDENTIALS`, `FORBIDDEN` (403), `QUOTA_EXCEEDED`
+      (403 + message en français tiré de « Quota exceeded: max_vms is limited to 3 (4 requested) »),
+      `TOO_MANY_ATTEMPTS` (429).
+- [x] Modèles : `VirtualMachine` (+ `owner`, `access`), `CreateVm` (+ `owner_id`), `VncResponse` (+ `uuid`,
+      `expires_at`), `User`, `Quota`, `Usage`, `Share`, `AccessEntry`, `AuditEntry`, `Settings`.
+- [x] Droits dans l'interface : actions d'hyperviseur, disques, réseaux et accès réservés aux admins ;
+      « Créer une VM » masqué si `vm-options` répond 403 ; VM prêtée = console, démarrer, arrêter, « Rendre ».
+- [x] Prêt de VM (`vm-share-modal`), changement de propriétaire (`vm-owner-modal`, admin), quota affiché
+      à la création, `owner_id` pour un admin, accès par hyperviseur (onglet « Accès », admin).
+- [x] Administration : utilisateurs (création, rôle, désactivation, quotas, mot de passe, suppression,
+      inscriptions libres) et journal d'audit paginé.
+- [x] Console VNC : jeton de 2 minutes (« Reconnecter », nouvel onglet avec jeton frais), message clair sur 409.
+- [x] Fausse API réécrite sur ce contrat (comptes `admin` / `alice` / `bob`, `ACCESS_TTL`), vérifiée par un
+      script d'assertions tiré de `auth_tests.rs`.
+- [x] Leçon 18 (authentification) dans la partie « Avancé ».
+- [x] Testé contre la vraie API (binaire de la branche `auth`, base de test isolée, hyperviseur
+      `test:///default`) : connexion, F5, refresh sur 401 avec requêtes simultanées (un seul refresh),
+      droits admin / utilisateur / emprunteur, quota, changement de mot de passe, administration.
+- [ ] **Non testé** : la console VNC avec un vrai QEMU (comme côté API), et sur de vrais hyperviseurs.
+- [ ] Suppression de réseau **masquée** : l'API n'a pas de `DELETE …/networks/{id}`
+      (le bouton, `NetworkDeleteModalComponent` et `deleteNetwork` sont prêts à rebrancher).
+- [ ] Pas de recherche d'utilisateurs pour un non-admin : pour prêter, il faut le nom exact
+      (l'API répond 404 sinon) ; le formulaire le dit.
+- [ ] Idées : tests unitaires de `authInterceptor` (refresh partagé, rejeu unique), `SESSION_EXPIRED`
+      détecté aussi sur un compte désactivé en cours de session.
+
 ### Documentation
 
 - [x] README.md, GUIDE.md (recettes et exercices), CLAUDE.md, ce plan.
 
 ## 2. Écarts constatés avec l'API (relevés le 14 octobre 2026)
+
+> Historique : tous ces écarts ont été résolus (voir la section 1). Les disques et réseaux, alors en 501, sont
+> maintenant fournis par l'API ; l'authentification est traitée dans la section « Authentification… ».
 
 L'API a avancé (derniers commits : création de VM, clonage, tâches,
 options de VM, VNC). Le front a été écrit pour une version plus ancienne.
@@ -139,7 +176,7 @@ un 409 affiche un message métier clair.
   une page dédiée (`pages/vm-console`) plus tard.
 - Afficher clairement les erreurs (VM éteinte, proxy indisponible).
 
-### Étape 5 — Disques et réseaux (quand l'API les fournit)
+### Étape 5 — Disques et réseaux (FAIT sur la branche `infra`, fusionnée dans `auth` ; reste la suppression de réseau)
 
 - Exercices 3 et 4 du GUIDE : création d'un disque, création d'un réseau.
   Ce sont de bons premiers sujets pour l'équipe : à leur laisser.
@@ -181,3 +218,5 @@ un 409 affiche un message métier clair.
 | 14 octobre 2026 | CLAUDE.md et ce plan ; écarts avec l'API relevés (section 2). |
 | 14 octobre 2026 | MVP : création complète, clonage, suppression, console VNC, fausse API à jour. |
 | 14 octobre 2026 | Formation avancée : 7 leçons (routage, modales, ContextBridge, signals, RxJS, injection). |
+| 22 octobre 2026 | Branche `infra` (Martageix) : création et suppression de disques et réseaux, clic sur une VM. |
+| 23 octobre 2026 | Branche `auth` : authentification, rôles, prêt de VM, quotas, administration, fausse API, leçon 18. |

@@ -2,6 +2,7 @@ import { Component, signal } from '@angular/core';
 
 import { ColumnComponent } from '@app/components/layout/column/column.component';
 import { PageComponent } from '@app/components/layout/page/page.component';
+import { LessonAuthenticationComponent } from '@app/components/lessons/lesson-authentication/lesson-authentication.component';
 import { LessonClassesComponent } from '@app/components/lessons/lesson-classes/lesson-classes.component';
 import { LessonComponentComponent } from '@app/components/lessons/lesson-component/lesson-component.component';
 import { LessonControlFlowComponent } from '@app/components/lessons/lesson-control-flow/lesson-control-flow.component';
@@ -47,6 +48,7 @@ type Partie = 'typescript' | 'angular' | 'layout' | 'avance';
     LessonAdvancedSignalsComponent,
     LessonRxjsComponent,
     LessonInjectionComponent,
+    LessonAuthenticationComponent,
   ],
   templateUrl: './learn.component.html',
   styleUrl: './learn.component.scss',
