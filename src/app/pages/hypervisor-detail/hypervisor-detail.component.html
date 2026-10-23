@@ -2,7 +2,7 @@
   <app-page backLink="/hypervisors" backLabel="Hyperviseurs" eyebrow="Hyperviseur" [title]="hypervisor.name" [subtitle]="hypervisor.uri">
     <app-status-badge actions [status]="hypervisor.status" />
 
-    <app-tabs [tabs]="onglets" [(active)]="onglet" />
+    <app-tabs [tabs]="onglets()" [(active)]="onglet" />
 
     <!-- Un seul onglet existe à la fois : il charge ses données à son ouverture. -->
     @switch (onglet()) {
@@ -14,6 +14,9 @@
       }
       @case ('networks') {
         <app-network-list [hypervisorId]="hypervisor.id" />
+      }
+      @case ('access') {
+        <app-hypervisor-access-list [hypervisorId]="hypervisor.id" />
       }
     }
   </app-page>

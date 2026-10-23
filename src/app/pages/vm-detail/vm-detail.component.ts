@@ -15,17 +15,24 @@ import { TextComponent } from '@app/components/ui/text/text.component';
 import { VmCloneModalComponent } from '@app/components/vm-clone-modal/vm-clone-modal.component';
 import { VmConsoleModalComponent } from '@app/components/vm-console-modal/vm-console-modal.component';
 import { VmDeleteModalComponent } from '@app/components/vm-delete-modal/vm-delete-modal.component';
+import { VmOwnerModalComponent } from '@app/components/vm-owner-modal/vm-owner-modal.component';
+import { VmShareModalComponent } from '@app/components/vm-share-modal/vm-share-modal.component';
 import { AppError } from '@app/models/app-error.model';
 import { Hypervisor } from '@app/models/hypervisor.model';
 import { VirtualMachine } from '@app/models/virtual-machine.model';
+import { AuthService } from '@app/services/auth.service';
 import { ContextBridgeService } from '@app/services/context-bridge.service';
 import { InventoryService } from '@app/services/inventory.service';
 import { ModalService } from '@app/services/modal.service';
+import { ShareService } from '@app/services/share.service';
 import { VmService } from '@app/services/vm.service';
+import { canManage } from '@app/utils/vm-access';
 
 /**
  * La page d'une machine virtuelle : ses caractéristiques et toutes les actions
- * possibles (démarrer, arrêter, console, cloner, supprimer).
+ * possibles (démarrer, arrêter, console, cloner, supprimer, prêter).
+ * Une VM prêtée à l'utilisateur n'offre que la console, démarrer, arrêter et « Rendre » ;
+ * l'administrateur peut en plus changer le propriétaire.
  *
  * `id` (hyperviseur) et `vmId` viennent de l'adresse /hypervisors/:id/vms/:vmId.
  */
@@ -51,6 +58,8 @@ export class VmDetailComponent implements OnInit {
   private readonly inventory = inject(InventoryService);
   private readonly modal = inject(ModalService);
   private readonly router = inject(Router);
+  private readonly shares = inject(ShareService);
+  protected readonly auth = inject(AuthService);
 
   readonly id = input.required<string>();
   readonly vmId = input.required<string>();
@@ -76,6 +85,9 @@ export class VmDetailComponent implements OnInit {
       error: (error: AppError) => this.error.set(error),
     });
   }
+
+  // Exposés au .html : des fonctions simples, définies dans utils/vm-access.ts.
+  protected readonly canManage = canManage;
 
   protected memory(vm: VirtualMachine): string {
     return `${Math.round((vm.memory_mb / 1024) * 10) / 10} Go`;
@@ -127,6 +139,47 @@ export class VmDetailComponent implements OnInit {
       });
   }
 
+  protected share(vm: VirtualMachine): void {
+    this.modal.open<VmShareModalComponent, void>(VmShareModalComponent, { inputs: { hypervisorId: this.id(), vm } });
+  }
+
+  /** Admin : changer le propriétaire, puis recharger la VM (son champ `owner` a changé). */
+  protected changeOwner(vm: VirtualMachine): void {
+    this.modal
+      .open<VmOwnerModalComponent, VirtualMachine>(VmOwnerModalComponent, { inputs: { hypervisorId: this.id(), vm } })
+      .afterClosed$.subscribe((updated) => {
+        if (updated) {
+          this.load();
+          this.inventory.refresh();
+        }
+      });
+  }
+
+  /** « Rendre » une VM prêtée : on retire son propre prêt, puis on quitte la page (elle ne nous est plus accessible). */
+  protected giveBack(vm: VirtualMachine): void {
+    const userId = this.auth.user()?.id;
+    if (!userId) {
+      return;
+    }
+    this.modal
+      .open<ConfirmModalComponent, boolean>(ConfirmModalComponent, {
+        size: 'sm',
+        inputs: {
+          title: `Rendre « ${vm.name} » ?`,
+          message: `Vous n'aurez plus accès à cette machine virtuelle. ${vm.owner ? vm.owner + ' pourra vous la prêter à nouveau.' : ''}`,
+          confirmLabel: 'Rendre',
+          successMessage: 'VM rendue.',
+          action: () => this.shares.revoke(this.id(), vm.id, userId),
+        },
+      })
+      .afterClosed$.subscribe((done) => {
+        if (done) {
+          this.inventory.refresh();
+          this.router.navigate(['/hypervisors']);
+        }
+      });
+  }
+
   protected console(vm: VirtualMachine): void {
     this.modal.open<VmConsoleModalComponent, void>(VmConsoleModalComponent, { size: 'screen', inputs: { hypervisorId: this.id(), vm } });
   }
@@ -137,6 +190,7 @@ export class VmDetailComponent implements OnInit {
       .afterClosed$.subscribe((copy) => {
         if (copy) {
           this.inventory.refresh();
+          this.auth.refreshUsage();
           this.router.navigate(['/hypervisors', this.id(), 'vms', copy.id]);
         }
       });
@@ -148,6 +202,7 @@ export class VmDetailComponent implements OnInit {
       .afterClosed$.subscribe((deleted) => {
         if (deleted) {
           this.inventory.refresh();
+          this.auth.refreshUsage();
           this.router.navigate(['/hypervisors', this.id()]);
         }
       });

@@ -55,6 +55,7 @@ export class NetworkListComponent implements OnInit {
     });
   }
 
+  /** Non branchée dans le .html : l'API n'a pas encore de route pour supprimer un réseau (voir le commentaire du .html). */
   protected remove(network: Network): void {
     this.modal
       .open<NetworkDeleteModalComponent, boolean>(NetworkDeleteModalComponent, {

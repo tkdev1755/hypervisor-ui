@@ -3,7 +3,9 @@ import { Component, OnInit, computed, inject, input, signal } from '@angular/cor
 import { ColumnComponent } from '@app/components/layout/column/column.component';
 import { RowComponent } from '@app/components/layout/row/row.component';
 import { ModalShellComponent, ModalState } from '@app/components/modal/modal-shell/modal-shell.component';
+import { UserPickerComponent } from '@app/components/user-picker/user-picker.component';
 import { ButtonComponent } from '@app/components/ui/button/button.component';
+import { CalloutComponent } from '@app/components/ui/callout/callout.component';
 import { Choice, ChoiceCardsComponent } from '@app/components/ui/choice-cards/choice-cards.component';
 import { NumberFieldComponent } from '@app/components/ui/number-field/number-field.component';
 import { TextFieldComponent } from '@app/components/ui/text-field/text-field.component';
@@ -11,7 +13,9 @@ import { TextComponent } from '@app/components/ui/text/text.component';
 import { AppError, isAppError } from '@app/models/app-error.model';
 import { VmOptions } from '@app/models/vm-options.model';
 import { CreateVm, VirtualMachine, VolumeRef } from '@app/models/virtual-machine.model';
+import { AuthService } from '@app/services/auth.service';
 import { ModalRef } from '@app/services/modal-ref';
+import { formatQuotaRow, quotaRows } from '@app/utils/quota';
 import { VmService } from '@app/services/vm.service';
 
 type Preset = 'small' | 'medium' | 'large';
@@ -30,13 +34,14 @@ const PRESETS: Record<Preset, { vcpus: number; memory_mb: number }> = {
  */
 @Component({
   selector: 'app-vm-form-modal',
-  imports: [ModalShellComponent, ColumnComponent, RowComponent, TextFieldComponent, TextComponent, ButtonComponent, ChoiceCardsComponent, NumberFieldComponent],
+  imports: [ModalShellComponent, ColumnComponent, RowComponent, TextFieldComponent, TextComponent, ButtonComponent, ChoiceCardsComponent, NumberFieldComponent, UserPickerComponent, CalloutComponent],
   templateUrl: './vm-form-modal.component.html',
   styleUrl: './vm-form-modal.component.scss',
 })
 export class VmFormModalComponent implements OnInit {
   protected readonly modalRef = inject(ModalRef<VirtualMachine>);
   private readonly vms = inject(VmService);
+  protected readonly auth = inject(AuthService);
 
   readonly hypervisorId = input.required<string>();
   readonly hypervisorName = input('');
@@ -54,6 +59,20 @@ export class VmFormModalComponent implements OnInit {
   /** L'ISO choisie, sous la forme « pool/volume » ; '' = aucune. */
   protected readonly iso = signal('');
   protected readonly start = signal(false);
+  /** Admin seulement : créer la VM pour un autre utilisateur (sans choix : pour soi). */
+  protected readonly ownerId = signal<string | undefined>(undefined);
+
+  /** Le quota de l'utilisateur, en une phrase (vide s'il n'a aucune limite). Voir GET /api/me. */
+  protected readonly quotaSummary = computed(() => {
+    const user = this.auth.user();
+    if (!user) {
+      return '';
+    }
+    return quotaRows(user)
+      .filter((row) => row.limit !== null)
+      .map((row) => `${row.label} : ${formatQuotaRow(row)}`)
+      .join(' · ');
+  });
 
   /** Le gabarit qui correspond aux valeurs actuelles ; aucun si on les a modifiées à la main. */
   protected readonly preset = computed<Preset | undefined>(
@@ -127,6 +146,7 @@ export class VmFormModalComponent implements OnInit {
   protected readonly loadingLabel = signal('Chargement des options…');
 
   ngOnInit(): void {
+    this.auth.refreshUsage(); // La consommation affichée doit être à jour.
     this.loadOptions();
   }
 
@@ -175,6 +195,7 @@ export class VmFormModalComponent implements OnInit {
       firmware: this.firmware(),
       start: this.start(),
       ...(iso ? { iso } : {}),
+      ...(this.auth.isAdmin() && this.ownerId() ? { owner_id: this.ownerId() } : {}),
     };
 
     this.loadingLabel.set('Création de la VM…');

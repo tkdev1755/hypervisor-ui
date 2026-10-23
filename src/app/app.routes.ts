@@ -49,6 +49,23 @@ export const routes: Routes = [
         title: 'Machine virtuelle · Hypervisor',
         loadComponent: () => import('./pages/vm-detail/vm-detail.component').then((m) => m.VmDetailComponent),
       },
+      {
+        path: 'account',
+        title: 'Mon compte · Hypervisor',
+        loadComponent: () => import('./pages/account/account.component').then((m) => m.AccountComponent),
+      },
+      {
+        path: 'admin/users',
+        title: 'Utilisateurs · Hypervisor',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./pages/admin-users/admin-users.component').then((m) => m.AdminUsersComponent),
+      },
+      {
+        path: 'admin/audit',
+        title: "Journal d'audit · Hypervisor",
+        canActivate: [adminGuard],
+        loadComponent: () => import('./pages/admin-audit/admin-audit.component').then((m) => m.AdminAuditComponent),
+      },
       { path: '**', component: NotFoundComponent, title: 'Page introuvable · Hypervisor' },
     ],
   },

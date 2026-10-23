@@ -13,9 +13,9 @@
   } @else {
     <app-grid [minItemWidth]="240">
       @for (network of networks(); track network.id) {
-        <app-resource-card icon="network" [title]="network.name" [subtitle]="network.bridge ?? 'sans bridge'" [status]="network.status">
-          <app-button variant="danger-ghost" size="sm" icon="trash" (pressed)="remove(network)">Supprimer</app-button>
-        </app-resource-card>
+        <!-- Pas de bouton « Supprimer » : l'API n'a pas (encore) de route DELETE pour les réseaux.
+             À rétablir avec remove(network) dès qu'elle existe (voir network-delete-modal). -->
+        <app-resource-card icon="network" [title]="network.name" [subtitle]="network.bridge ?? 'sans bridge'" [status]="network.status" />
       } @empty {
         <app-empty-state icon="network" title="Aucun réseau" message="Aucun réseau virtuel n'est déclaré sur cet hyperviseur." />
       }

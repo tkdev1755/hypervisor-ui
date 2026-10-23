@@ -79,6 +79,11 @@ export class AuthService {
     return this.http.get<User>('/api/me', { context: this.context }).pipe(tap((user) => this.user.set(user)));
   }
 
+  /** Relit l'utilisateur en silence, pour mettre à jour sa consommation de quota (après création, clonage, suppression de VM). */
+  refreshUsage(): void {
+    this.loadMe().subscribe({ error: () => undefined });
+  }
+
   /**
    * PUT /api/me/password. L'API ferme ensuite TOUTES les sessions du compte, la nôtre comprise :
    * on se reconnecte tout de suite avec le nouveau mot de passe.

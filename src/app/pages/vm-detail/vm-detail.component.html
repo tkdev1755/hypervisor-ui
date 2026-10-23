@@ -14,8 +14,18 @@
         <app-button variant="danger-ghost" icon="stop" (pressed)="forceStop(vm)">Forcer l'arrêt</app-button>
       } @else {
         <app-button icon="play" [loading]="busy()" (pressed)="start()">Démarrer</app-button>
-        <app-button variant="ghost" icon="copy" (pressed)="clone(vm)">Cloner</app-button>
-        <app-button variant="danger-ghost" icon="trash" (pressed)="remove(vm)">Supprimer</app-button>
+        @if (canManage(vm)) {
+          <app-button variant="ghost" icon="copy" (pressed)="clone(vm)">Cloner</app-button>
+          <app-button variant="danger-ghost" icon="trash" (pressed)="remove(vm)">Supprimer</app-button>
+        }
+      }
+      @if (canManage(vm)) {
+        <app-button variant="ghost" icon="share" (pressed)="share(vm)">Prêter</app-button>
+      } @else {
+        <app-button variant="ghost" icon="arrow-left" (pressed)="giveBack(vm)">Rendre la VM</app-button>
+      }
+      @if (auth.isAdmin()) {
+        <app-button variant="ghost" icon="user" (pressed)="changeOwner(vm)">Propriétaire</app-button>
       }
     </ng-container>
 
@@ -40,6 +50,15 @@
         <app-column [gap]="4">
           <app-text variant="eyebrow">Hyperviseur</app-text>
           <app-text variant="title">{{ hypervisor()?.name ?? '…' }}</app-text>
+        </app-column>
+      </app-card>
+      <app-card>
+        <app-column [gap]="4">
+          <app-text variant="eyebrow">Propriétaire</app-text>
+          <app-text variant="title">{{ vm.owner ?? 'Aucun' }}</app-text>
+          @if (!canManage(vm)) {
+            <app-text variant="small" color="muted">Cette VM vous est prêtée.</app-text>
+          }
         </app-column>
       </app-card>
     </app-grid>
