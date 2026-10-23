@@ -1,0 +1,19 @@
+<app-modal-shell
+  title="Créer un réseau"
+  [state]="state()"
+  [error]="error()"
+  loadingLabel="Création du réseau…"
+  successMessage="Réseau créé."
+  (retry)="state.set('form')"
+  (done)="modalRef.close(result() ?? undefined)"
+>
+  <app-column [gap]="16">
+    <app-text-field label="Nom" placeholder="isolated" [(value)]="name" [error]="nameError()" (enter)="submit()" />
+    <app-text-field label="Bridge (facultatif)" placeholder="virbr1" hint="Laissez vide pour un réseau sans bridge." [(value)]="bridge" (enter)="submit()" />
+  </app-column>
+
+  <app-row footer [gap]="8">
+    <app-button variant="ghost" (pressed)="modalRef.close()">Annuler</app-button>
+    <app-button (pressed)="submit()">Créer</app-button>
+  </app-row>
+</app-modal-shell>

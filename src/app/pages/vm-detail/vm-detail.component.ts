@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, input, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { exhaustMap, filter, take, takeUntil, timer } from 'rxjs';
 
 import { CardComponent } from '@app/components/layout/card/card.component';
 import { ColumnComponent } from '@app/components/layout/column/column.component';
@@ -85,7 +86,23 @@ export class VmDetailComponent implements OnInit {
   }
 
   protected stop(): void {
-    this.run(this.vms.stop(this.id(), this.vmId()));
+    this.busy.set(true);
+    this.actionError.set(null);
+    this.vms.stop(this.id(), this.vmId()).subscribe({
+      next: (vm) => {
+        this.vm.set(vm);
+        if (vm.status === 'running') {
+          this.waitUntilStopped();
+          return;
+        }
+        this.busy.set(false);
+        this.inventory.refresh();
+      },
+      error: (error: AppError) => {
+        this.actionError.set(error);
+        this.busy.set(false);
+      },
+    });
   }
 
   /** Coupe l'alimentation de la VM : on demande confirmation. */
@@ -150,5 +167,27 @@ export class VmDetailComponent implements OnInit {
         this.busy.set(false);
       },
     });
+  }
+
+  private waitUntilStopped(): void {
+    timer(0, 1000)
+      .pipe(
+        exhaustMap(() => this.vms.get(this.id(), this.vmId())),
+        filter((vm) => vm.status !== 'running'),
+        take(1),
+        takeUntil(timer(60_000)),
+      )
+      .subscribe({
+        next: (vm) => {
+          this.vm.set(vm);
+          this.busy.set(false);
+          this.inventory.refresh();
+        },
+        complete: () => this.busy.set(false),
+        error: (error: AppError) => {
+          this.actionError.set(error);
+          this.busy.set(false);
+        },
+      });
   }
 }

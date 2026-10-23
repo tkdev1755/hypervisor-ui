@@ -1,0 +1,19 @@
+<app-modal-shell
+  [title]="'Supprimer « ' + disk().name + ' » ?'"
+  [state]="state()"
+  [error]="error()"
+  loadingLabel="Suppression du disque…"
+  successMessage="Disque supprimé."
+  (retry)="state.set('form')"
+  (done)="modalRef.close(true)"
+>
+  <app-column [gap]="12">
+    <app-text>Cette action supprimera définitivement le disque.</app-text>
+    <app-text color="muted">{{ disk().size_gb }} Go · {{ disk().format }}</app-text>
+  </app-column>
+
+  <app-row footer [gap]="8">
+    <app-button variant="ghost" (pressed)="modalRef.close()">Annuler</app-button>
+    <app-button variant="danger" (pressed)="confirm()">Supprimer</app-button>
+  </app-row>
+</app-modal-shell>

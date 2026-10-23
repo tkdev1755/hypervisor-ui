@@ -1,0 +1,19 @@
+<app-modal-shell
+  [title]="'Supprimer « ' + network().name + ' » ?'"
+  [state]="state()"
+  [error]="error()"
+  loadingLabel="Suppression du réseau…"
+  successMessage="Réseau supprimé."
+  (retry)="state.set('form')"
+  (done)="modalRef.close(true)"
+>
+  <app-column [gap]="12">
+    <app-text>Cette action supprimera définitivement le réseau.</app-text>
+    <app-text color="muted">Bridge : {{ network().bridge ?? 'aucun' }}</app-text>
+  </app-column>
+
+  <app-row footer [gap]="8">
+    <app-button variant="ghost" (pressed)="modalRef.close()">Annuler</app-button>
+    <app-button variant="danger" (pressed)="confirm()">Supprimer</app-button>
+  </app-row>
+</app-modal-shell>
