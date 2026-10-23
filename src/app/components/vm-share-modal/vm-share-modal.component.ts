@@ -112,10 +112,17 @@ export class VmShareModalComponent implements OnInit {
         this.load();
       },
       error: (error: unknown) => {
-        this.error.set(isAppError(error) ? error : null);
+        this.error.set(isAppError(error) ? this.explain(error, username) : null);
         this.state.set('error');
       },
     });
+  }
+
+  /** Ici, un 404 veut dire « aucun utilisateur ne porte ce nom » : le message générique ne serait pas clair. */
+  private explain(error: AppError, username: string): AppError {
+    return error.kind === 'business' && error.code === 'NOT_FOUND'
+      ? { ...error, title: 'Utilisateur introuvable', message: `Aucun utilisateur ne s'appelle « ${username} ». Vérifiez l'orthographe : il faut le nom exact.` }
+      : error;
   }
 
   protected revoke(share: Share): void {

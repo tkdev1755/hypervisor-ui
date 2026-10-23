@@ -8,7 +8,7 @@
   (retry)="state.set('form')"
   (done)="modalRef.close(true)"
 >
-  <app-user-picker label="Utilisateur" [exclude]="alreadyGranted()" [(value)]="userId" />
+  <app-user-picker label="Utilisateur" [includeAdmins]="false" [exclude]="alreadyGranted()" [(value)]="userId" />
   @if (userError(); as message) {
     <app-text variant="small" color="danger">{{ message }}</app-text>
   }

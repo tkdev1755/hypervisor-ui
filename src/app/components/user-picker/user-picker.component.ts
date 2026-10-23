@@ -17,6 +17,7 @@ import { UserService } from '@app/services/user.service';
  *
  * - value   : l'id de l'utilisateur choisi (undefined tant qu'on n'a rien choisi)
  * - exclude : des ids à ne pas proposer
+ * - includeAdmins : false pour ne proposer que les utilisateurs simples (un admin a déjà tous les droits)
  * - label   : le titre du groupe de choix
  */
 @Component({
@@ -30,6 +31,7 @@ export class UserPickerComponent implements OnInit {
 
   readonly value = model<string | undefined>(undefined);
   readonly exclude = input<string[]>([]);
+  readonly includeAdmins = input(true);
   readonly label = input('Utilisateur');
 
   protected readonly all = signal<User[]>([]);
@@ -38,7 +40,7 @@ export class UserPickerComponent implements OnInit {
 
   protected readonly choices = computed<Choice<string>[]>(() =>
     this.all()
-      .filter((user) => !user.disabled && !this.exclude().includes(user.id))
+      .filter((user) => !user.disabled && !this.exclude().includes(user.id) && (this.includeAdmins() || user.role !== 'admin'))
       .map((user) => ({ value: user.id, label: user.username, description: user.role === 'admin' ? 'Administrateur' : 'Utilisateur' })),
   );
 

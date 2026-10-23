@@ -1,6 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 
+import { ColumnComponent } from '@app/components/layout/column/column.component';
 import { PageComponent } from '@app/components/layout/page/page.component';
 import { RowComponent } from '@app/components/layout/row/row.component';
 import { SpacerComponent } from '@app/components/layout/spacer/spacer.component';
@@ -28,6 +29,7 @@ const PAGE_SIZE = 25;
   imports: [
     DatePipe,
     PageComponent,
+    ColumnComponent,
     RowComponent,
     SpacerComponent,
     TextComponent,
@@ -46,6 +48,8 @@ export class AdminAuditComponent implements OnInit {
   private readonly admin = inject(AdminService);
 
   protected readonly action = signal('');
+  /** Quelques actions courantes, pour filtrer d'un clic (le filtre de l'API est une correspondance EXACTE). */
+  protected readonly commonActions = ['auth.login', 'user.create', 'user.update', 'user.quota', 'vm.create', 'vm.start', 'hypervisor.grant', 'settings.update'];
   protected readonly page = signal(0);
   protected readonly entries = signal<AuditEntry[]>([]);
   protected readonly hasNext = signal(false);
@@ -55,6 +59,11 @@ export class AdminAuditComponent implements OnInit {
 
   ngOnInit(): void {
     this.load();
+  }
+
+  protected filterBy(action: string): void {
+    this.action.set(action);
+    this.search();
   }
 
   /** Appliquer le filtre : on repart de la première page. */

@@ -149,7 +149,7 @@ export class AuthService {
   expireSession(): void {
     const returnUrl = this.router.url;
     this.clearSession();
-    void this.router.navigate(['/login'], { queryParams: { expired: 1, ...(returnUrl !== '/login' ? { returnUrl } : {}) } });
+    void this.router.navigate(['/login'], { queryParams: { expired: 1, ...(!returnUrl.startsWith('/login') ? { returnUrl } : {}) } });
   }
 
   /** Oublie tout : jetons, utilisateur, et les données en cache qui dépendent des droits de l'utilisateur précédent. */

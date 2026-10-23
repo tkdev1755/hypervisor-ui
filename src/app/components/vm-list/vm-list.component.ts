@@ -104,6 +104,13 @@ export class VmListComponent implements OnInit {
         this.loading.set(false);
       },
       error: (error: AppError) => {
+        // Un utilisateur qui vient de rendre sa dernière VM prêtée ici ne voit plus cet hyperviseur (404) :
+        // on le ramène à la liste plutôt que d'afficher une erreur.
+        if (error.kind === 'business' && error.code === 'NOT_FOUND' && !this.auth.isAdmin()) {
+          this.inventory.refresh();
+          void this.router.navigate(['/hypervisors']);
+          return;
+        }
         this.error.set(error);
         this.loading.set(false);
       },

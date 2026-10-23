@@ -29,7 +29,7 @@ const CATALOG: Record<BusinessErrorCode, { title: string; message: string }> = {
   CONFLICT: {
     title: 'Action impossible en l’état',
     message:
-      'Un nom est déjà pris, un disque est déjà utilisé, ou la VM n’est pas dans le bon état (par exemple : elle doit être arrêtée pour être clonée ou supprimée).',
+      'Un nom est déjà pris, une ressource est déjà utilisée, ou l’élément n’est pas dans le bon état (une VM doit être arrêtée pour être clonée ou supprimée ; un compte qui possède des VM ne peut pas être supprimé ; on ne peut pas retirer le dernier administrateur).',
   },
   TIMEOUT: {
     title: 'Délai dépassé',

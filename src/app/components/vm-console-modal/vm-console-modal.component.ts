@@ -44,10 +44,21 @@ export class VmConsoleModalComponent implements OnInit {
         this.state.set('form');
       },
       error: (error: unknown) => {
-        this.error.set(isAppError(error) ? error : null);
+        this.error.set(isAppError(error) ? this.explain(error) : null);
         this.state.set('error');
       },
     });
+  }
+
+  /** Pour la console, un 409 veut dire « VM arrêtée, ou port VNC pas encore attribué » : le texte générique serait trompeur. */
+  private explain(error: AppError): AppError {
+    return error.kind === 'business' && error.code === 'CONFLICT'
+      ? {
+          ...error,
+          title: 'Console indisponible',
+          message: "La VM doit être en marche et son port VNC attribué. Attendez quelques secondes après le démarrage, puis cliquez sur « Réessayer ».",
+        }
+      : error;
   }
 
   /**
