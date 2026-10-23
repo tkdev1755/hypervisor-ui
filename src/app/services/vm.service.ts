@@ -56,7 +56,12 @@ export class VmService {
     return this.http.delete<void>(`${this.url(hypervisorId)}/${vmId}`, { params, context: this.context });
   }
 
-  /** De quoi ouvrir la console VNC d'une VM en marche. */
+  /** Changer le propriétaire d'une VM (admin seulement). Une VM créée hors de l'API reçoit ainsi son propriétaire. */
+  setOwner(hypervisorId: string, vmId: string, ownerId: string): Observable<VirtualMachine> {
+    return this.http.put<VirtualMachine>(`${this.url(hypervisorId)}/${vmId}/owner`, { owner_id: ownerId }, { context: this.context });
+  }
+
+  /** De quoi ouvrir la console VNC d'une VM en marche (le jeton de l'adresse expire au bout de 2 minutes). */
   vnc(hypervisorId: string, vmId: string): Observable<VncResponse> {
     return this.http.get<VncResponse>(`${this.url(hypervisorId)}/${vmId}/vnc`, { context: this.context });
   }

@@ -10,7 +10,7 @@
 
     <nav class="nav-list" aria-label="Navigation principale">
       <div class="nav-title">Navigation</div>
-      @for (item of nav; track item.link) {
+      @for (item of visibleNav(); track item.link) {
         <a class="nav-item" [routerLink]="item.link" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: item.exact }">
           <app-icon [name]="item.icon" [size]="17" />
           {{ item.label }}
@@ -19,6 +19,21 @@
     </nav>
 
     <app-sidebar-inventory />
+
+    @if (auth.user(); as user) {
+      <div class="account">
+        <a routerLink="/account" class="account-link" routerLinkActive="is-active" title="Mon compte">
+          <app-icon name="user" [size]="17" />
+          <span class="account-text">
+            <span class="account-name">{{ user.username }}</span>
+            <span class="account-role">{{ user.role === 'admin' ? 'Administrateur' : 'Utilisateur' }}</span>
+          </span>
+        </a>
+        <button type="button" class="logout" aria-label="Se déconnecter" title="Se déconnecter" (click)="auth.logout()">
+          <app-icon name="logout" [size]="16" />
+        </button>
+      </div>
+    }
 
     <button type="button" class="health" [attr.data-health]="health()" (click)="checkHealth()" title="Vérifier à nouveau">
       <span class="health-dot"></span>

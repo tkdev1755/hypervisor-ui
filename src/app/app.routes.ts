@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { ShellComponent } from './components/shell/shell.component';
+import { adminGuard, authGuard } from './guards/auth.guard';
 import { HomeComponent } from './pages/home/home.component';
 import { NotFoundComponent } from './pages/not-found/not-found.component';
 
@@ -8,14 +9,22 @@ import { NotFoundComponent } from './pages/not-found/not-found.component';
  * Les pages de l'application : chaque route associe une adresse à un composant.
  *
  * - ShellComponent est la mise en page commune (barre latérale) : ses
- *   « children » s'affichent à l'intérieur.
+ *   « children » s'affichent à l'intérieur. Il demande d'être connecté (authGuard).
+ * - /login est en dehors du Shell : pas de barre latérale avant la connexion.
+ * - adminGuard réserve une page aux administrateurs.
  * - loadComponent charge une page seulement quand on la visite (lazy loading).
  * - title change le titre de l'onglet du navigateur.
  */
 export const routes: Routes = [
   {
+    path: 'login',
+    title: 'Connexion · Hypervisor',
+    loadComponent: () => import('./pages/login/login.component').then((m) => m.LoginComponent),
+  },
+  {
     path: '',
     component: ShellComponent,
+    canActivate: [authGuard],
     children: [
       { path: '', component: HomeComponent, title: 'Accueil · Hypervisor' },
       {
