@@ -1,10 +1,16 @@
 <app-page
   eyebrow="Infrastructure"
   title="Hyperviseurs"
-  subtitle="Les hôtes KVM enregistrés dans l'API. Leur statut est revérifié auprès de libvirt à chaque chargement."
+  [subtitle]="
+    auth.isAdmin()
+      ? 'Les hôtes KVM enregistrés dans l\'API. Leur statut est revérifié auprès de libvirt à chaque chargement.'
+      : 'Les hôtes KVM sur lesquels vous avez accès, ou qui hébergent une de vos machines virtuelles.'
+  "
 >
   <app-button actions variant="ghost" icon="refresh" [disabled]="loading()" (pressed)="load()">Actualiser</app-button>
-  <app-button actions icon="plus" (pressed)="add()">Ajouter</app-button>
+  @if (auth.isAdmin()) {
+    <app-button actions icon="plus" (pressed)="add()">Ajouter</app-button>
+  }
 
   @if (loading()) {
     <app-loading label="Chargement des hyperviseurs…" />
@@ -21,17 +27,27 @@
           [clickable]="true"
           (tap)="open(hypervisor)"
         >
-          <app-button variant="ghost" size="sm" icon="edit" (pressed)="edit(hypervisor)">Modifier</app-button>
-          <app-button variant="danger-ghost" size="sm" icon="trash" (pressed)="remove(hypervisor)">Supprimer</app-button>
+          @if (auth.isAdmin()) {
+            <app-button variant="ghost" size="sm" icon="edit" (pressed)="edit(hypervisor)">Modifier</app-button>
+            <app-button variant="danger-ghost" size="sm" icon="trash" (pressed)="remove(hypervisor)">Supprimer</app-button>
+          }
         </app-resource-card>
       } @empty {
-        <app-empty-state
-          icon="server"
-          title="Aucun hyperviseur"
-          message="Ajoutez un hôte KVM avec son URI libvirt pour commencer à gérer ses machines virtuelles."
-        >
-          <app-button icon="plus" (pressed)="add()">Ajouter un hyperviseur</app-button>
-        </app-empty-state>
+        @if (auth.isAdmin()) {
+          <app-empty-state
+            icon="server"
+            title="Aucun hyperviseur"
+            message="Ajoutez un hôte KVM avec son URI libvirt pour commencer à gérer ses machines virtuelles."
+          >
+            <app-button icon="plus" (pressed)="add()">Ajouter un hyperviseur</app-button>
+          </app-empty-state>
+        } @else {
+          <app-empty-state
+            icon="server"
+            title="Aucun hyperviseur accessible"
+            message="Demandez à un administrateur de vous donner accès à un hyperviseur, ou de vous prêter une machine virtuelle."
+          />
+        }
       }
     </app-grid>
   }

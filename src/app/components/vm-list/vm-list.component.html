@@ -3,7 +3,9 @@
     <app-text color="muted">Machines virtuelles de cet hyperviseur</app-text>
     <app-spacer />
     <app-button variant="ghost" size="sm" icon="refresh" [disabled]="loading()" (pressed)="load()">Actualiser</app-button>
-    <app-button size="sm" icon="plus" (pressed)="create()">Créer une VM</app-button>
+    @if (canCreate()) {
+      <app-button size="sm" icon="plus" (pressed)="create()">Créer une VM</app-button>
+    }
   </app-row>
 
   @if (loading()) {
@@ -11,7 +13,11 @@
   } @else if (error(); as error) {
     <app-error-panel [error]="error" [retryable]="true" (retry)="load()" />
   } @else if (list().length === 0) {
-    <app-empty-state icon="cpu" title="Aucune machine virtuelle" message="Créez une première VM sur cet hyperviseur." />
+    <app-empty-state
+      icon="cpu"
+      title="Aucune machine virtuelle"
+      [message]="canCreate() ? 'Créez une première VM sur cet hyperviseur.' : 'Aucune machine virtuelle ne vous est accessible sur cet hyperviseur.'"
+    />
   } @else {
     <app-grid [minItemWidth]="180" [gap]="12">
       <app-card [padding]="16">
@@ -48,8 +54,15 @@
     } @else {
       <app-list>
         @for (vm of filteredList(); track vm.id) {
-          <app-list-tile icon="cpu" [title]="vm.name" [subtitle]="describe(vm)" [status]="isShuttingDown(vm.id) ? 'paused' : vm.status">
-            @if (vm.status === 'running') {
+          <app-list-tile
+            icon="cpu"
+            [title]="vm.name"
+            [subtitle]="describe(vm)"
+            [status]="isShuttingDown(vm.id) ? 'shutting_down' : vm.status"
+            [clickable]="true"
+            (tap)="details(vm)"
+          >
+            @if (vm.status === 'running' || vm.status === 'shutting_down') {
               <app-button variant="ghost" size="sm" icon="terminal" [disabled]="isShuttingDown(vm.id)" (pressed)="console(vm)">Console</app-button>
               <app-button
                 variant="ghost"
@@ -64,8 +77,18 @@
               <app-button variant="danger-ghost" size="sm" icon="stop" (pressed)="forceStop(vm)">Forcer</app-button>
             } @else {
               <app-button variant="ghost" size="sm" icon="play" [loading]="busyId() === vm.id" (pressed)="start(vm)">Démarrer</app-button>
-              <app-button variant="ghost" size="sm" icon="copy" (pressed)="clone(vm)">Cloner</app-button>
-              <app-button variant="danger-ghost" size="sm" icon="trash" (pressed)="remove(vm)" />
+              @if (canManage(vm)) {
+                <app-button variant="ghost" size="sm" icon="copy" (pressed)="clone(vm)">Cloner</app-button>
+                <app-button variant="danger-ghost" size="sm" icon="trash" (pressed)="remove(vm)" />
+              }
+            }
+            @if (canManage(vm)) {
+              <!-- Une VM sans propriétaire ne peut pas être prêtée (409) : l'admin lui en donne un d'abord (page de la VM). -->
+              @if (vm.owner) {
+                <app-button variant="ghost" size="sm" icon="share" (pressed)="share(vm)">Prêter</app-button>
+              }
+            } @else {
+              <app-button variant="ghost" size="sm" icon="arrow-left" (pressed)="giveBack(vm)">Rendre</app-button>
             }
           </app-list-tile>
         }

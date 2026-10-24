@@ -1,0 +1,42 @@
+<app-page eyebrow="Administration" title="Journal d'audit" subtitle="Qui a fait quoi, du plus récent au plus ancien. Les mots de passe et les jetons n'y figurent jamais.">
+  <app-button actions variant="ghost" icon="refresh" [disabled]="loading()" (pressed)="load()">Actualiser</app-button>
+
+  <app-column [gap]="8">
+    <app-row [gap]="12" crossAlign="end">
+      <app-text-field label="Filtrer par action (nom exact)" placeholder="vm.create" [(value)]="action" (enter)="search()" />
+      <app-button variant="secondary" icon="list" (pressed)="search()">Filtrer</app-button>
+      <app-button variant="ghost" (pressed)="filterBy('')">Tout afficher</app-button>
+    </app-row>
+    <app-row [gap]="8" [wrap]="true">
+      <app-text variant="small" color="subtle">Actions courantes :</app-text>
+      @for (common of commonActions; track common) {
+        <app-button variant="secondary" size="sm" (pressed)="filterBy(common)">{{ common }}</app-button>
+      }
+    </app-row>
+  </app-column>
+
+  @if (loading()) {
+    <app-loading label="Chargement du journal…" />
+  } @else if (error(); as error) {
+    <app-error-panel [error]="error" [retryable]="true" (retry)="load()" />
+  } @else if (entries().length === 0) {
+    <app-empty-state icon="list" title="Aucune entrée" message="Aucune action ne correspond à ce filtre." />
+  } @else {
+    <app-list>
+      @for (entry of entries(); track entry.id) {
+        <app-list-tile
+          [icon]="entry.success ? 'check-circle' : 'alert'"
+          [title]="entry.action"
+          [subtitle]="describe(entry, (entry.at * 1000 | date: 'dd/MM/yyyy HH:mm:ss'))"
+        />
+      }
+    </app-list>
+    <app-row [gap]="8">
+      <app-button variant="ghost" size="sm" icon="arrow-left" [disabled]="page() === 0" (pressed)="goTo(page() - 1)">Plus récentes</app-button>
+      <app-spacer />
+      <app-text variant="small" color="muted">Page {{ pageNumber() }}</app-text>
+      <app-spacer />
+      <app-button variant="ghost" size="sm" icon="arrow-right" [disabled]="!hasNext()" (pressed)="goTo(page() + 1)">Plus anciennes</app-button>
+    </app-row>
+  }
+</app-page>

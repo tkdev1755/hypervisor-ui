@@ -1,0 +1,52 @@
+<app-lesson [number]="18" title="L'authentification : jetons, intercepteur et gardes" [code]="code" codeTitle="auth.interceptor.ts + auth.service.ts">
+  <app-text>
+    L'API refuse toute requête sans <strong>jeton</strong>. À la connexion, elle en donne deux :
+  </app-text>
+  <app-text>
+    • l'<strong>access token</strong> (15 minutes), envoyé à chaque requête dans l'en-tête
+    <app-inline-code>Authorization: Bearer …</app-inline-code>. On le garde <strong>en mémoire</strong> (un signal) : il
+    disparaît à la fermeture de l'onglet et un script malveillant ne peut pas le lire dans le stockage du navigateur ;<br />
+    • le <strong>refresh token</strong> (7 jours), qui sert à en obtenir un nouveau sans redemander le mot de passe. Il est gardé
+    dans <app-inline-code>sessionStorage</app-inline-code> pour qu'un rechargement de la page ne déconnecte pas.
+  </app-text>
+  <app-text>
+    Personne n'ajoute ces jetons à la main : l'<strong>intercepteur</strong> le fait pour toutes les requêtes, et rattrape
+    les jetons expirés. Les <strong>gardes de routes</strong> (<app-inline-code>authGuard</app-inline-code>,
+    <app-inline-code>adminGuard</app-inline-code>) décident si une page peut s'afficher. L'<strong>interface cache</strong> les
+    boutons interdits, mais c'est l'API qui fait respecter les droits (403 ou 404) : cacher n'est que du confort.
+  </app-text>
+  <app-callout type="warning" title="Le refresh token ne sert qu'une fois">
+    Si dix requêtes échouent en même temps avec un jeton expiré, il ne faut surtout pas lancer dix refresh : le deuxième
+    échouerait et déconnecterait l'utilisateur. C'est le rôle de <app-inline-code>shareReplay</app-inline-code> dans
+    <app-inline-code>refresh()</app-inline-code> (leçons 16 et 17) : toutes les requêtes attendent le <em>même</em> refresh,
+    puis sont rejouées une fois.
+  </app-callout>
+  <app-callout title="Pourquoi lire le code métier plutôt que « 401 » ?">
+    Un 401 sur « changer mon mot de passe » signifie « l'ancien mot de passe est faux », pas « jeton expiré ». Le mapper
+    d'erreurs fait la différence (<app-inline-code>SESSION_EXPIRED</app-inline-code> contre
+    <app-inline-code>INVALID_CREDENTIALS</app-inline-code>) ; l'intercepteur s'appuie sur lui. Sans cela, une faute de frappe
+    déconnecterait l'utilisateur.
+  </app-callout>
+  <app-callout type="tip" title="Essayez">
+    Lisez votre profil, puis forcez un refresh : le journal montre les appels, et vous restez connecté. Pour voir le vrai
+    cas d'un jeton expiré, lancez la fausse API avec <app-inline-code>ACCESS_TTL=20 npm run mock:full</app-inline-code>
+    (jeton de 20 secondes), attendez, puis actualisez une liste : l'onglet Réseau des outils du navigateur montre un 401, un refresh,
+    puis la requête rejouée.
+  </app-callout>
+
+  <app-column demo [gap]="12">
+    @if (auth.user(); as user) {
+      <app-text variant="code">Connecté : {{ user.username }} ({{ user.role }})</app-text>
+      <app-text variant="code" color="muted">isAdmin() = {{ auth.isAdmin() }}</app-text>
+    }
+    <app-row [gap]="8">
+      <app-button size="sm" icon="user" [loading]="busy()" (pressed)="readMe()">GET /api/me</app-button>
+      <app-button size="sm" variant="secondary" icon="refresh" [loading]="busy()" (pressed)="forceRefresh()">Forcer un refresh</app-button>
+    </app-row>
+    @for (line of journal(); track $index) {
+      <app-text variant="code">{{ line }}</app-text>
+    } @empty {
+      <app-text variant="small" color="subtle">(journal vide)</app-text>
+    }
+  </app-column>
+</app-lesson>

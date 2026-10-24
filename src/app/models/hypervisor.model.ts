@@ -11,7 +11,7 @@ export type HypervisorStatus = 'connected' | 'disconnected';
 export interface Hypervisor {
   id: string;
   name: string;
-  /** L'adresse libvirt, par exemple qemu:///system ou qemu+ssh://admin@serveur/system */
+  /** L'adresse libvirt, par exemple qemu:///system ou qemu+ssh://admin@serveur/system. Vide pour un non-admin. */
   uri: string;
   status: HypervisorStatus;
 }

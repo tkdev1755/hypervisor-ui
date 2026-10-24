@@ -13,6 +13,7 @@
   </app-column>
 
   <app-row footer [gap]="8">
+    <app-button variant="ghost" icon="refresh" (pressed)="connect()">Reconnecter</app-button>
     <app-button variant="ghost" icon="arrow-right" (pressed)="openInTab()">Ouvrir dans un onglet</app-button>
     <app-button (pressed)="modalRef.close()">Fermer</app-button>
   </app-row>

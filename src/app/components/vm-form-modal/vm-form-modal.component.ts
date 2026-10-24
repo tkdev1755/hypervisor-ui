@@ -3,7 +3,9 @@ import { Component, OnInit, computed, inject, input, signal } from '@angular/cor
 import { ColumnComponent } from '@app/components/layout/column/column.component';
 import { RowComponent } from '@app/components/layout/row/row.component';
 import { ModalShellComponent, ModalState } from '@app/components/modal/modal-shell/modal-shell.component';
+import { UserPickerComponent } from '@app/components/user-picker/user-picker.component';
 import { ButtonComponent } from '@app/components/ui/button/button.component';
+import { CalloutComponent } from '@app/components/ui/callout/callout.component';
 import { Choice, ChoiceCardsComponent } from '@app/components/ui/choice-cards/choice-cards.component';
 import { NumberFieldComponent } from '@app/components/ui/number-field/number-field.component';
 import { TextFieldComponent } from '@app/components/ui/text-field/text-field.component';
@@ -11,18 +13,33 @@ import { TextComponent } from '@app/components/ui/text/text.component';
 import { AppError, isAppError } from '@app/models/app-error.model';
 import { VmOptions } from '@app/models/vm-options.model';
 import { CreateVm, DiskSpec, VirtualMachine, VolumeRef } from '@app/models/virtual-machine.model';
+import { AuthService } from '@app/services/auth.service';
 import { ModalRef } from '@app/services/modal-ref';
 import { VmService } from '@app/services/vm.service';
+import { formatQuotaRow, quotaRows } from '@app/utils/quota';
 
 type Preset = 'small' | 'medium' | 'large';
+/**
+ * Comment le disque de la VM est fourni :
+ *   'new'      → un nouveau volume, créé dans un pool
+ *   'existing' → un volume libre déjà présent dans le pool
+ *   'none'     → aucun disque : une ISO est alors obligatoire (Live CD)
+ */
 type DiskMode = 'new' | 'existing' | 'none';
 
+/** Les caractéristiques de chaque gabarit. */
 const PRESETS: Record<Preset, { vcpus: number; memory_mb: number }> = {
   small: { vcpus: 1, memory_mb: 1024 },
   medium: { vcpus: 2, memory_mb: 4096 },
   large: { vcpus: 4, memory_mb: 8192 },
 };
 
+/**
+ * Créer une VM : un nom, un gabarit, un disque (nouveau, existant ou aucun), une ISO facultative,
+ * un réseau et un firmware. Les choix (pools, volumes, réseaux, limites) viennent de l'API (`vm-options`) :
+ * la modale les charge à son ouverture. Un administrateur peut aussi désigner le propriétaire de la VM,
+ * et le quota de l'utilisateur est rappelé en haut du formulaire.
+ */
 @Component({
   selector: 'app-vm-form-modal',
   imports: [
@@ -34,6 +51,8 @@ const PRESETS: Record<Preset, { vcpus: number; memory_mb: number }> = {
     ButtonComponent,
     ChoiceCardsComponent,
     NumberFieldComponent,
+    UserPickerComponent,
+    CalloutComponent,
   ],
   templateUrl: './vm-form-modal.component.html',
   styleUrl: './vm-form-modal.component.scss',
@@ -41,10 +60,12 @@ const PRESETS: Record<Preset, { vcpus: number; memory_mb: number }> = {
 export class VmFormModalComponent implements OnInit {
   protected readonly modalRef = inject(ModalRef<VirtualMachine>);
   private readonly vms = inject(VmService);
+  protected readonly auth = inject(AuthService);
 
   readonly hypervisorId = input.required<string>();
   readonly hypervisorName = input('');
 
+  /** Les choix proposés par l'API ; null tant qu'ils ne sont pas chargés. */
   protected readonly options = signal<VmOptions | null>(null);
 
   protected readonly name = signal('');
@@ -58,9 +79,25 @@ export class VmFormModalComponent implements OnInit {
 
   protected readonly network = signal<string | undefined>(undefined);
   protected readonly firmware = signal<string | undefined>(undefined);
+  /** L'ISO choisie, sous la forme « pool/volume » ; '' = aucune. */
   protected readonly iso = signal('');
   protected readonly start = signal(false);
+  /** Admin seulement : créer la VM pour un autre utilisateur (sans choix : pour soi). */
+  protected readonly ownerId = signal<string | undefined>(undefined);
 
+  /** Le quota de l'utilisateur, en une phrase (vide s'il n'a aucune limite). Voir GET /api/me. */
+  protected readonly quotaSummary = computed(() => {
+    const user = this.auth.user();
+    if (!user) {
+      return '';
+    }
+    return quotaRows(user)
+      .filter((row) => row.limit !== null)
+      .map((row) => `${row.label} : ${formatQuotaRow(row)}`)
+      .join(' · ');
+  });
+
+  /** Le gabarit qui correspond aux valeurs actuelles ; aucun si on les a modifiées à la main. */
   protected readonly preset = computed<Preset | undefined>(() => {
     const vcpus = this.vcpus();
     const mem = this.memoryMb();
@@ -147,6 +184,7 @@ export class VmFormModalComponent implements OnInit {
     }));
   });
 
+  /** Choisir un gabarit remplit simplement les champs vCPU et mémoire. */
   protected applyPreset(preset: Preset | undefined): void {
     if (preset) {
       this.vcpus.set(PRESETS[preset].vcpus);
@@ -160,8 +198,8 @@ export class VmFormModalComponent implements OnInit {
     if (!this.submitted()) {
       return null;
     }
-    return !/^[a-zA-Z0-9-_.]{1,64}$/.test(this.name())
-      ? 'De 1 à 64 caractères : lettres, chiffres, tirets, underscores ou points.'
+    return !/^[a-zA-Z0-9_-][a-zA-Z0-9._-]{0,63}$/.test(this.name())
+      ? 'De 1 à 64 caractères : lettres, chiffres, tirets, underscores ou points (pas de point au début).'
       : null;
   });
 
@@ -214,6 +252,7 @@ export class VmFormModalComponent implements OnInit {
   protected readonly loadingLabel = signal('Chargement des options…');
 
   ngOnInit(): void {
+    this.auth.refreshUsage(); // La consommation affichée doit être à jour.
     this.loadOptions();
   }
 
@@ -238,6 +277,7 @@ export class VmFormModalComponent implements OnInit {
     });
   }
 
+  /** « Réessayer » : recharger les options si elles manquent, sinon revenir au formulaire. */
   protected retry(): void {
     if (this.options()) {
       this.state.set('form');
@@ -279,6 +319,7 @@ export class VmFormModalComponent implements OnInit {
       firmware: this.firmware(),
       start: this.start(),
       ...(iso ? { iso } : {}),
+      ...(this.auth.isAdmin() && this.ownerId() ? { owner_id: this.ownerId() } : {}),
     };
 
     this.loadingLabel.set('Création de la VM…');
@@ -294,6 +335,7 @@ export class VmFormModalComponent implements OnInit {
     });
   }
 
+  /** Retrouve le pool et le volume de l'ISO choisie (le nom du pool peut contenir « / »). */
   private selectedIso(): VolumeRef | null {
     const key = this.iso();
     const pools = this.options()?.storage_pools ?? [];

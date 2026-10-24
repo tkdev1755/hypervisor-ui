@@ -1,0 +1,26 @@
+<app-modal-shell
+  title="Créer un disque"
+  [state]="state()"
+  [error]="error()"
+  loadingLabel="Création du disque…"
+  successMessage="Disque créé."
+  (retry)="state.set('form')"
+  (done)="modalRef.close(result() ?? undefined)"
+>
+  <app-column [gap]="16">
+    <app-text-field label="Nom" placeholder="web-01.qcow2" [(value)]="name" [error]="nameError()" (enter)="submit()" />
+    <app-number-field label="Taille" unit="Go" [(value)]="sizeGb" [min]="1" [max]="10000" />
+    @if (sizeError(); as sizeError) {
+      <app-text variant="small" color="danger">{{ sizeError }}</app-text>
+    }
+    <app-column [gap]="6">
+      <app-text variant="small" weight="medium">Format</app-text>
+      <app-choice-cards label="Format du disque" [columns]="2" [options]="formats" [(value)]="format" />
+    </app-column>
+  </app-column>
+
+  <app-row footer [gap]="8">
+    <app-button variant="ghost" (pressed)="modalRef.close()">Annuler</app-button>
+    <app-button (pressed)="submit()">Créer</app-button>
+  </app-row>
+</app-modal-shell>

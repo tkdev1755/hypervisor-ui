@@ -1,0 +1,45 @@
+<app-padding [top]="72" [horizontal]="16">
+  <app-center>
+    <app-sized-box [width]="400">
+      <app-card [padding]="28">
+        <app-column [gap]="16">
+          <app-column [gap]="4">
+            <app-text variant="eyebrow">Hypervisor</app-text>
+            <app-text variant="title">{{ mode() === 'login' ? 'Connexion' : 'Créer un compte' }}</app-text>
+          </app-column>
+
+          @if (expired()) {
+            <app-callout type="warning" title="Session expirée">Reconnectez-vous pour continuer.</app-callout>
+          }
+
+          <app-text-field label="Nom d'utilisateur" [(value)]="username" [error]="usernameError()" (enter)="submit()" />
+          <app-text-field label="Mot de passe" type="password" [(value)]="password" [error]="passwordError()" (enter)="submit()" />
+          @if (mode() === 'register') {
+            <app-text-field
+              label="Confirmer le mot de passe"
+              type="password"
+              hint="8 caractères au minimum."
+              [(value)]="confirmation"
+              [error]="confirmationError()"
+              (enter)="submit()"
+            />
+          }
+
+          @if (error(); as error) {
+            <app-error-panel [error]="error" />
+          }
+
+          <app-button [fullWidth]="true" [loading]="loading()" (pressed)="submit()">
+            {{ mode() === 'login' ? 'Se connecter' : 'Créer mon compte' }}
+          </app-button>
+
+          @if (mode() === 'login' && registrationOpen()) {
+            <app-button variant="ghost" [fullWidth]="true" (pressed)="switchMode('register')">Créer un compte</app-button>
+          } @else if (mode() === 'register') {
+            <app-button variant="ghost" [fullWidth]="true" (pressed)="switchMode('login')">J'ai déjà un compte</app-button>
+          }
+        </app-column>
+      </app-card>
+    </app-sized-box>
+  </app-center>
+</app-padding>

@@ -6,9 +6,9 @@ machines virtuelles, disques et réseaux, en appelant hypervisor-api (Rust, Axum
 Angular 21 · Bootstrap 5 · Angular CDK (modales).
 
 > **Jamais fait d'Angular ni de TypeScript ?** Lancez le projet et ouvrez la page
-> **Apprendre** : dix-sept leçons courtes, avec le code et son résultat en direct
+> **Apprendre** : dix-huit leçons courtes, avec le code et son résultat en direct
 > (les dix premières pour les bases, une partie « Avancé » pour le routage, les
-> modales, le ContextBridge, les signals avancés, RxJS et l'injection).
+> modales, le ContextBridge, les signals avancés, RxJS, l'injection et l'authentification).
 > Ensuite, lisez [GUIDE.md](GUIDE.md).
 
 ## Démarrer
@@ -31,7 +31,18 @@ npm install
 Les deux écoutent sur le port 3000. Dans la fausse API, une URI contenant
 `fail` simule un hôte libvirt injoignable.
 
-**2. Lancer le front :**
+**2. Se connecter.** Toute l'API (sauf `/ping` et `/api/auth/*`) demande un jeton :
+l'application s'ouvre sur la page de connexion.
+
+| API | Comptes |
+|---|---|
+| Fausse API | `admin` / `admin-password` (administrateur), `alice` / `alice` et `bob` / `bob` (utilisateurs, avec des VM et un prêt d'exemple). |
+| Vraie API | L'admin créé au premier démarrage : `ADMIN_PASSWORD='…' JWT_SECRET='…' cargo run` (voir `docs/AUTH.md` dans le dépôt de l'API). Un admin crée ensuite les autres comptes, ou ouvre les inscriptions libres. |
+
+`ACCESS_TTL=20 npm run mock:full` fait expirer le jeton d'accès en 20 secondes :
+pratique pour voir le refresh automatique (leçon 18).
+
+**3. Lancer le front :**
 
 ```bash
 npm start
@@ -64,7 +75,8 @@ src/app/
 │   └── vm-list/, ...        Les composants métier (listes, formulaires)
 ├── services/                Les appels à l'API, les modales, le ContextBridge
 ├── models/                  Les types des données (Hypervisor, VirtualMachine...)
-├── interceptors/            L'intercepteur d'erreurs HTTP
+├── interceptors/            Le jeton de connexion (auth) et l'intercepteur d'erreurs HTTP
+├── guards/                  Les gardes de routes : connecté, administrateur
 ├── errors/                  La traduction des erreurs de l'API
 ├── config/                  Les réglages du ContextBridge
 └── utils/                   Petites fonctions utilitaires

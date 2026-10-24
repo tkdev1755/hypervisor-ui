@@ -1,0 +1,53 @@
+<app-page
+  eyebrow="Administration"
+  title="Utilisateurs"
+  subtitle="Les comptes de l'application, leurs rôles et leurs quotas. Un changement de rôle ou une désactivation prend effet immédiatement."
+>
+  <app-button actions variant="ghost" icon="refresh" [disabled]="loading()" (pressed)="load()">Actualiser</app-button>
+  <app-button actions icon="plus" (pressed)="create()">Créer un utilisateur</app-button>
+
+  <app-callout [title]="'Inscriptions libres : ' + (registrationOpen() === null ? '…' : registrationOpen() ? 'ouvertes' : 'fermées')">
+    <app-row [gap]="12">
+      <app-text color="muted">
+        {{ registrationOpen() ? "N'importe qui peut créer un compte « utilisateur » depuis la page de connexion." : "Seul un administrateur peut créer des comptes." }}
+      </app-text>
+      <app-spacer />
+      <app-button variant="secondary" size="sm" [disabled]="registrationOpen() === null" (pressed)="toggleRegistration()">
+        {{ registrationOpen() ? 'Fermer' : 'Ouvrir' }} les inscriptions
+      </app-button>
+    </app-row>
+  </app-callout>
+
+  @if (loading()) {
+    <app-loading label="Chargement des utilisateurs…" />
+  } @else if (error(); as error) {
+    <app-error-panel [error]="error" [retryable]="true" (retry)="load()" />
+  } @else if (list().length === 0) {
+    <app-empty-state icon="users" title="Aucun utilisateur" />
+  } @else {
+    <app-list>
+      @for (user of list(); track user.id) {
+        <app-list-tile
+          icon="user"
+          [title]="user.username + (user.id === myId() ? ' (vous)' : '')"
+          [subtitle]="describe(user)"
+          [status]="user.disabled ? 'inactive' : 'active'"
+        >
+          <app-button variant="ghost" size="sm" icon="edit" (pressed)="editQuota(user)">Quotas</app-button>
+          <app-button variant="ghost" size="sm" icon="key" (pressed)="resetPassword(user)">Mot de passe</app-button>
+          @if (user.id !== myId()) {
+            <app-button variant="ghost" size="sm" icon="shield" (pressed)="toggleRole(user)">
+              {{ user.role === 'admin' ? 'Rétrograder' : 'Promouvoir' }}
+            </app-button>
+            <app-button variant="ghost" size="sm" (pressed)="toggleDisabled(user)">{{ user.disabled ? 'Activer' : 'Désactiver' }}</app-button>
+            <app-button variant="danger-ghost" size="sm" icon="trash" (pressed)="remove(user)" />
+          }
+        </app-list-tile>
+      }
+    </app-list>
+  }
+
+  @if (actionError(); as actionError) {
+    <app-error-panel [error]="actionError" />
+  }
+</app-page>

@@ -1,0 +1,42 @@
+@if (auth.user(); as user) {
+  <app-page eyebrow="Compte" [title]="user.username" subtitle="Votre rôle, vos limites et votre mot de passe.">
+    <app-button actions variant="ghost" icon="key" (pressed)="changePassword()">Changer mon mot de passe</app-button>
+    <app-button actions variant="ghost" icon="logout" (pressed)="auth.logout()">Se déconnecter</app-button>
+
+    <app-grid [minItemWidth]="220">
+      <app-card>
+        <app-column [gap]="4">
+          <app-text variant="eyebrow">Rôle</app-text>
+          <app-text variant="title">{{ user.role === 'admin' ? 'Administrateur' : 'Utilisateur' }}</app-text>
+        </app-column>
+      </app-card>
+      <app-card>
+        <app-column [gap]="4">
+          <app-text variant="eyebrow">Compte créé le</app-text>
+          <app-text variant="title">{{ user.created_at * 1000 | date: 'dd/MM/yyyy' }}</app-text>
+        </app-column>
+      </app-card>
+      <app-card>
+        <app-column [gap]="4">
+          <app-text variant="eyebrow">Statut</app-text>
+          <app-status-badge [status]="user.disabled ? 'inactive' : 'active'" />
+        </app-column>
+      </app-card>
+    </app-grid>
+
+    <app-column [gap]="12">
+      <app-text variant="heading">Quota et consommation</app-text>
+      <app-text color="muted">Ce que vous consommez, et la limite fixée par un administrateur (« illimité » si aucune).</app-text>
+      <app-grid [minItemWidth]="220">
+        @for (row of rows(); track row.label) {
+          <app-card>
+            <app-column [gap]="4">
+              <app-text variant="eyebrow">{{ row.label }}</app-text>
+              <app-text variant="title" [color]="row.limited ? 'default' : 'muted'">{{ row.text }}</app-text>
+            </app-column>
+          </app-card>
+        }
+      </app-grid>
+    </app-column>
+  </app-page>
+}

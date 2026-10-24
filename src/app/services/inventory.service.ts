@@ -23,6 +23,12 @@ export class InventoryService {
   readonly vms = signal<Record<string, VirtualMachine[]>>({});
   readonly loading = signal(false);
 
+  /** Vide l'inventaire (à la déconnexion : le prochain utilisateur n'a pas les mêmes droits). */
+  clear(): void {
+    this.hypervisors.set([]);
+    this.vms.set({});
+  }
+
   refresh(): void {
     this.loading.set(true);
     this.hypervisorService

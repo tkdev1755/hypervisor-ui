@@ -1,0 +1,20 @@
+<app-modal-shell
+  title="Changer le propriétaire"
+  [subtitle]="vm().name + ' · actuellement : ' + (vm().owner ?? 'personne')"
+  [state]="state()"
+  [error]="error()"
+  loadingLabel="Changement de propriétaire…"
+  successMessage="Propriétaire modifié."
+  (retry)="state.set('form')"
+  (done)="modalRef.close(result() ?? undefined)"
+>
+  <app-user-picker label="Nouveau propriétaire" [(value)]="ownerId" />
+  @if (ownerError(); as message) {
+    <app-text variant="small" color="danger">{{ message }}</app-text>
+  }
+
+  <app-row footer [gap]="8">
+    <app-button variant="ghost" (pressed)="modalRef.close()">Annuler</app-button>
+    <app-button (pressed)="submit()">Enregistrer</app-button>
+  </app-row>
+</app-modal-shell>

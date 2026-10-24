@@ -12,6 +12,7 @@ import { LoadingComponent } from '@app/components/ui/loading/loading.component';
 import { ResourceCardComponent } from '@app/components/ui/resource-card/resource-card.component';
 import { AppError } from '@app/models/app-error.model';
 import { Hypervisor } from '@app/models/hypervisor.model';
+import { AuthService } from '@app/services/auth.service';
 import { ContextBridgeService } from '@app/services/context-bridge.service';
 import { HypervisorService } from '@app/services/hypervisor.service';
 import { InventoryService } from '@app/services/inventory.service';
@@ -34,6 +35,8 @@ export class HypervisorListComponent implements OnInit {
   private readonly bridge = inject(ContextBridgeService);
   private readonly router = inject(Router);
   private readonly inventory = inject(InventoryService);
+  /** Seul un administrateur ajoute, modifie ou supprime un hyperviseur. */
+  protected readonly auth = inject(AuthService);
 
   // L'état de la page, sous forme de signals.
   protected readonly hypervisors = signal<Hypervisor[]>([]);

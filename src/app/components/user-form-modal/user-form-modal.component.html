@@ -1,0 +1,21 @@
+<app-modal-shell
+  title="Créer un utilisateur"
+  subtitle="Le mot de passe est à communiquer à la personne ; elle pourra le changer ensuite."
+  [state]="state()"
+  [error]="error()"
+  loadingLabel="Création du compte…"
+  successMessage="Compte créé."
+  (retry)="state.set('form')"
+  (done)="modalRef.close(result() ?? undefined)"
+>
+  <app-column [gap]="16">
+    <app-text-field label="Nom d'utilisateur" [(value)]="username" [error]="usernameError()" (enter)="submit()" />
+    <app-text-field label="Mot de passe" type="password" [(value)]="password" [error]="passwordError()" (enter)="submit()" />
+    <app-choice-cards label="Rôle" [columns]="2" [options]="roles" [(value)]="role" />
+  </app-column>
+
+  <app-row footer [gap]="8">
+    <app-button variant="ghost" (pressed)="modalRef.close()">Annuler</app-button>
+    <app-button (pressed)="submit()">Créer</app-button>
+  </app-row>
+</app-modal-shell>

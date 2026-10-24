@@ -24,7 +24,7 @@ import { StatusBadgeComponent } from '../status-badge/status-badge.component';
     '[attr.role]': "clickable() ? 'button' : null",
     '[attr.tabindex]': 'clickable() ? 0 : null',
     '(click)': 'onTap()',
-    '(keydown.enter)': 'onTap()',
+    '(keydown.enter)': 'onKeydown($event)',
   },
 })
 export class ListTileComponent {
@@ -38,6 +38,12 @@ export class ListTileComponent {
   protected onTap(): void {
     if (this.clickable()) {
       this.tap.emit();
+    }
+  }
+
+  protected onKeydown(event: Event): void {
+    if (event.target === event.currentTarget) {
+      this.onTap();
     }
   }
 }

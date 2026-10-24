@@ -1,0 +1,56 @@
+<app-modal-shell
+  [title]="'Prêter « ' + vm().name + ' »'"
+  subtitle="L'emprunteur peut ouvrir la console, démarrer et arrêter la VM, rien d'autre."
+  [state]="state()"
+  [error]="error()"
+  loadingLabel="Enregistrement du prêt…"
+  (retry)="state.set('form')"
+>
+  <app-column [gap]="20">
+    <app-column [gap]="8">
+      <app-text variant="small" weight="medium">Emprunteurs actuels</app-text>
+      @if (loadingList()) {
+        <app-loading label="Chargement…" />
+      } @else if (listError(); as listError) {
+        <app-error-panel [error]="listError" [retryable]="true" (retry)="load()" />
+      } @else if (list().length === 0) {
+        <app-text color="muted">Cette VM n'est prêtée à personne.</app-text>
+      } @else {
+        <app-list>
+          @for (share of list(); track share.user_id) {
+            <app-list-tile
+              icon="user"
+              [title]="share.username"
+              [subtitle]="share.expires_at ? 'Jusqu\'au ' + (share.expires_at * 1000 | date: 'dd/MM/yyyy HH:mm') : 'Sans limite de durée'"
+            >
+              <app-button variant="danger-ghost" size="sm" icon="trash" (pressed)="revoke(share)">Retirer</app-button>
+            </app-list-tile>
+          }
+        </app-list>
+      }
+      @if (actionError(); as actionError) {
+        <app-error-panel [error]="actionError" />
+      }
+    </app-column>
+
+    <app-column [gap]="12">
+      <app-text variant="small" weight="medium">Prêter à quelqu'un</app-text>
+      <app-text-field
+        label="Nom d'utilisateur de l'emprunteur"
+        hint="Le nom exact : il n'y a pas de recherche."
+        [(value)]="username"
+        [error]="usernameError()"
+        (enter)="add()"
+      />
+      <app-choice-cards label="Durée du prêt" [columns]="4" [options]="durations" [(value)]="duration" />
+      @if (lastShared(); as shared) {
+        <app-text variant="small" color="success">VM prêtée à {{ shared }}.</app-text>
+      }
+    </app-column>
+  </app-column>
+
+  <app-row footer [gap]="8">
+    <app-button variant="ghost" (pressed)="modalRef.close()">Fermer</app-button>
+    <app-button icon="share" (pressed)="add()">Prêter</app-button>
+  </app-row>
+</app-modal-shell>

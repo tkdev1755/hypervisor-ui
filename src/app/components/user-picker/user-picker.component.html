@@ -1,0 +1,9 @@
+@if (loading()) {
+  <app-loading label="Chargement des utilisateurs…" />
+} @else if (error(); as error) {
+  <app-error-panel [error]="error" [retryable]="true" (retry)="load()" />
+} @else if (choices().length === 0) {
+  <app-text color="muted">Aucun utilisateur disponible.</app-text>
+} @else {
+  <app-choice-cards [label]="label()" [options]="choices()" [columns]="2" [(value)]="value" />
+}

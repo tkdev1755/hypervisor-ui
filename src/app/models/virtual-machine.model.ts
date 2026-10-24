@@ -1,3 +1,11 @@
+/**
+ * Ce que l'utilisateur connecté peut faire d'une VM :
+ *   'admin'  → tout (il est administrateur)
+ *   'owner'  → tout (c'est la sienne)
+ *   'shared' → on la lui a PRÊTÉE : console, démarrer, arrêter, et rien d'autre
+ */
+export type VmAccess = 'admin' | 'owner' | 'shared';
+
 /** Une machine virtuelle, telle que l'API la renvoie. */
 export interface VirtualMachine {
   id: string;
@@ -6,6 +14,9 @@ export interface VirtualMachine {
   memory_mb: number;
   vcpus: number;
   status: string;
+  /** Le nom d'utilisateur du propriétaire ; `null` si la VM a été créée hors de l'API. */
+  owner?: string | null;
+  access?: VmAccess | null;
 }
 
 /** Un volume désigné par son pool et son nom (jamais par un chemin). */
@@ -31,6 +42,8 @@ export interface CreateVm {
   network?: string;
   firmware?: string;
   start?: boolean;
+  /** Créer la VM pour quelqu'un d'autre (id d'un utilisateur). Réservé aux admins (sinon 403). */
+  owner_id?: string;
 }
 
 /** Ce qu'on envoie pour cloner une VM arrêtée. */

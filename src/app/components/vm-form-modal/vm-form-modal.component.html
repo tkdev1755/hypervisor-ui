@@ -9,6 +9,9 @@
   (done)="modalRef.close(result() ?? undefined)"
 >
   <app-column [gap]="16">
+    @if (quotaSummary(); as summary) {
+      <app-callout title="Votre quota">{{ summary }}</app-callout>
+    }
     <app-text-field label="Nom" placeholder="web-01" [(value)]="name" [error]="nameError()" (enter)="submit()" />
 
     <app-column [gap]="6">
@@ -83,6 +86,13 @@
       <app-text variant="small" weight="medium">Démarrer après la création</app-text>
       <app-choice-cards label="Démarrer après la création" [columns]="2" [options]="startChoices" [(value)]="start" />
     </app-column>
+    @if (auth.isAdmin()) {
+      <app-column [gap]="6">
+        <app-text variant="small" weight="medium">Propriétaire (facultatif)</app-text>
+        <app-text variant="small" color="muted">Sans choix, la VM vous appartient (choisissez-vous pour revenir en arrière). Le quota du propriétaire s'applique.</app-text>
+        <app-user-picker label="Propriétaire" [(value)]="ownerId" />
+      </app-column>
+    }
   </app-column>
 
   <app-row footer [gap]="8">
