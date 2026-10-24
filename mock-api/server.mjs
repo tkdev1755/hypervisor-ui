@@ -82,8 +82,8 @@ const local = addHypervisor('kvm-local', 'qemu:///system');
 addHypervisor('kvm-lab', 'qemu+ssh://admin@192.168.1.20/system');
 access.get(local.id).set(alice.id, now());
 addVm(local.id, 'web-01', 4096, 2, 'running', alice);
-addVm(local.id, 'db-01', 8192, 4, 'shutoff', null); // créée « hors de l'API » : sans propriétaire
-const bobVm = addVm(local.id, 'bob-vm', 2048, 1, 'shutoff', bob);
+addVm(local.id, 'db-01', 8192, 4, 'stopped', null); // créée « hors de l'API » : sans propriétaire
+const bobVm = addVm(local.id, 'bob-vm', 2048, 1, 'stopped', bob);
 bobVm.shares.push({ user_id: alice.id, username: 'alice', created_at: now(), expires_at: null });
 
 // --- Réponses ---------------------------------------------------------------
@@ -497,7 +497,7 @@ async function handleVms(req, res, { id, resource, subId, action, extra, method,
       const diskGb = body.disks.reduce((sum, disk) => sum + (disk.size_gb ?? 0), 0);
       const violation = quotaViolation(owner, { vcpus: body.vcpus, memory_mb: body.memory_mb, disk_gb: diskGb });
       if (violation) return forbidden(violation);
-      const vm = addVm(id, body.name, body.memory_mb, body.vcpus, body.start ? 'running' : 'shutoff', owner);
+      const vm = addVm(id, body.name, body.memory_mb, body.vcpus, body.start ? 'running' : 'stopped', owner);
       logAudit(user, 'vm.create', vm.id);
       return send(res, 201, vmView(vm, user));
     }
@@ -510,7 +510,7 @@ async function handleVms(req, res, { id, resource, subId, action, extra, method,
   // Démarrer, arrêter, console : propriétaire, admin, emprunteur.
   if (method === 'POST' && (action === 'start' || action === 'stop')) {
     if ((action === 'start') === (vm.status === 'running')) return err(res, 409, `VM already ${vm.status}`);
-    vm.status = action === 'start' ? 'running' : 'shutoff';
+    vm.status = action === 'start' ? 'running' : 'stopped';
     logAudit(user, `vm.${action}`, vm.id);
     // Le vrai arrêt ACPI (sans ?force=true) est asynchrone : l'état renvoyé peut encore être « running ».
     if (action === 'stop' && url.searchParams.get('force') !== 'true') {
@@ -579,7 +579,7 @@ async function handleVms(req, res, { id, resource, subId, action, extra, method,
     jobs.set(job.id, job);
     // La « copie des disques » dure 3 secondes. Le clone appartient à celui qui le demande.
     setTimeout(() => {
-      const copy = addVm(id, body.name, vm.memory_mb, vm.vcpus, 'shutoff', user);
+      const copy = addVm(id, body.name, vm.memory_mb, vm.vcpus, 'stopped', user);
       Object.assign(job, { status: 'succeeded', result: vmView(copy, user) });
       logAudit(user, 'vm.clone', copy.id);
     }, 3000);

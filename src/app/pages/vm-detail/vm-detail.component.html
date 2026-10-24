@@ -20,7 +20,9 @@
         }
       }
       @if (canManage(vm)) {
-        <app-button variant="ghost" icon="share" (pressed)="share(vm)">Prêter</app-button>
+        @if (vm.owner) {
+          <app-button variant="ghost" icon="share" (pressed)="share(vm)">Prêter</app-button>
+        }
       } @else {
         <app-button variant="ghost" icon="arrow-left" (pressed)="giveBack(vm)">Rendre la VM</app-button>
       }

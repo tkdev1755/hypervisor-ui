@@ -202,6 +202,10 @@ mainteneur a conçue en entreprise. Respectez leur contrat.
 - **Sass** : Bootstrap utilise encore `@import` ; les avertissements sont
   réduits au silence dans `angular.json` (`silenceDeprecations`). N'y ajoutez
   pas `mixed-decls` (obsolète, provoque un avertissement).
+- **Statuts de VM de l'API** : `running`, `paused`, `shutting_down`, `stopped` (pas `shutoff`), `crashed`,
+  `unknown` (voir `state_label` dans `libvirt.rs`). `app-status-badge` les traduit ; la fausse API doit
+  utiliser les mêmes. Un arrêt propre (ACPI) peut durer : `vm-list` interroge alors la liste toutes les
+  2 secondes, au plus une minute (« Arrêt en cours… »), puis laisse « Forcer ».
 - **Leçons avancées (11 à 18)** : leurs démos utilisent les vrais services
   (`ModalService`, `ContextBridgeService`, `Router`, les jetons d'injection)
   mais **ne doivent jamais modifier quoi que ce soit côté API** : modales

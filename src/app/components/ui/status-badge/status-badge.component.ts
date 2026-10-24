@@ -10,6 +10,8 @@ const STATUSES: Record<string, { label: string; tone: Tone }> = {
   stopped: { label: 'Arrêtée', tone: 'neutral' },
   shutoff: { label: 'Éteinte', tone: 'neutral' },
   paused: { label: 'En pause', tone: 'warning' },
+  shutting_down: { label: 'Arrêt en cours', tone: 'warning' },
+  crashed: { label: 'Planté', tone: 'danger' },
   active: { label: 'Actif', tone: 'success' },
   inactive: { label: 'Inactif', tone: 'neutral' },
 };

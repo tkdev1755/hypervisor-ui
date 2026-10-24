@@ -220,3 +220,4 @@ un 409 affiche un message métier clair.
 | 14 octobre 2026 | Formation avancée : 7 leçons (routage, modales, ContextBridge, signals, RxJS, injection). |
 | 22 octobre 2026 | Branche `infra` (Martageix) : création et suppression de disques et réseaux, clic sur une VM. |
 | 23 octobre 2026 | Branche `auth` : authentification, rôles, prêt de VM, quotas, administration, fausse API, leçon 18. |
+| 24 octobre 2026 | `main` (abdellatif212) fusionné dans `auth` : récapitulatif et filtres des VM, suivi de l'arrêt, modes de disque (nouveau / existant / aucun). Corrigés au passage : polling borné à 1 minute, statut `shutting_down`, nom de VM sans point initial, commentaires pédagogiques restaurés, fausse API en `stopped`. |
