@@ -15,6 +15,7 @@
 #                  (8081 / 8443) et de noVNC (6081 / 6443) prennent d'autres ports.
 #   TAG            la version de l'image (latest par défaut)
 #   API_NETWORK / API_UPSTREAM  le réseau Docker de l'API et son adresse (voir plus bas)
+#   API_CA_PATH / API_TLS_NAME  le certificat de l'API et son nom, pour que nginx le vérifie — API_CA_PATH obligatoire
 #
 # Sans la vraie API, avec la fausse API dans un conteneur à côté :
 #     docker compose -f docker-compose.yml -f docker-compose.mock.yml up -d --build
@@ -68,8 +69,21 @@ services:
     #   - "127.0.0.1:8080:8080"
     environment:
       # Où nginx envoie /api et /ping, vu depuis le conteneur : le HAProxy de l'API, sur son
-      # entrée interne (port 8000, non publié), et non le conteneur de l'API directement.
-      API_UPSTREAM: ${API_UPSTREAM:-http://api-haproxy:8000}
+      # entrée HTTPS interne (port 9443, non publiée), et non le conteneur de l'API directement.
+      API_UPSTREAM: ${API_UPSTREAM:-https://api-haproxy:9443}
+      # Le nom que porte le certificat de l'API (son domaine, ou localhost en auto-signé) :
+      # nginx vérifie le certificat avec ce nom.
+      API_TLS_NAME: ${API_TLS_NAME:-localhost}
+    volumes:
+      # Ce à quoi nginx fait confiance pour le certificat de l'API : le certificat lui-même
+      # (auto-signé) ou une autorité (Let's Encrypt : /etc/ssl/certs/ca-certificates.crt de
+      # la machine). create_host_path: false : un chemin faux fait échouer le démarrage.
+      - type: bind
+        source: ${API_CA_PATH:?API_CA_PATH doit désigner le certificat (ou l'autorité) de l'API}
+        target: /etc/nginx/api-ca.pem
+        read_only: true
+        bind:
+          create_host_path: false
     networks:
       - edge
       - hypervisor-api

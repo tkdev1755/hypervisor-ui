@@ -9,6 +9,8 @@ services:
   ui:
     environment:
       API_UPSTREAM: http://mock:3000
+    # Fausse API en http:// : pas de certificat de l'API à vérifier.
+    volumes: !reset []
     # !override remplace la liste de docker-compose.yml : pas besoin du réseau de l'API.
     networks: !override
       - edge

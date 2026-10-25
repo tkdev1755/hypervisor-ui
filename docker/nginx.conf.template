@@ -1,7 +1,7 @@
 # Configuration nginx du front (modèle : ${API_UPSTREAM} est remplacé au démarrage du conteneur).
 #
-#   /api/…, /ping, /swagger-ui, /api-docs/…  → l'API, par le HAProxy de l'API
-#                                              (http://api-haproxy:8000 ; comme proxy.conf.json avec ng serve)
+#   /api/…, /ping, /swagger-ui, /api-docs/…  → l'API, par le HAProxy de l'API, en HTTPS
+#                                              (https://api-haproxy:9443 ; comme proxy.conf.json avec ng serve)
 #   /mock-novnc                               → la fausse console de la fausse API (404 sur la vraie)
 #   tout le reste                             → l'application Angular (index.html pour ses routes)
 
@@ -39,6 +39,17 @@ server {
         proxy_set_header X-Forwarded-Proto https;
         # Certaines opérations libvirt (hyperviseur distant par SSH) prennent du temps.
         proxy_read_timeout 120s;
+
+        # Vers une API en https:// : le certificat est vérifié, au nom qu'il porte (API_TLS_NAME),
+        # pas au nom « api-haproxy » utilisé pour le joindre. API_CA est le certificat ou
+        # l'autorité de confiance. Sans effet quand API_UPSTREAM est en http:// (fausse API).
+        proxy_ssl_verify on;
+        proxy_ssl_verify_depth 3;
+        proxy_ssl_trusted_certificate ${API_CA};
+        proxy_ssl_name ${API_TLS_NAME};
+        proxy_ssl_server_name on;
+        proxy_ssl_protocols TLSv1.2 TLSv1.3;
+        proxy_ssl_session_reuse on;
     }
 
     # ---------- l'application ----------

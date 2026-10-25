@@ -86,8 +86,10 @@ Puis ouvrir `https://<votre-domaine>`.
   et ajoute l'en-tête HSTS.
 - Le front rejoint le réseau Docker de l'API (`hypervisor-api_hypervisor-net`,
   réglable avec `API_NETWORK`) et lui parle par le HAProxy de l'API,
-  `http://api-haproxy:8000` (`API_UPSTREAM`) : une entrée interne, non publiée, qui
-  applique les mêmes règles que l'accès HTTPS à l'API.
+  `https://api-haproxy:9443` (`API_UPSTREAM`) : une entrée HTTPS interne, non publiée, qui
+  applique les mêmes règles que l'accès HTTPS à l'API. nginx vérifie son certificat :
+  `API_CA_PATH` (le certificat de l'API, ou l'autorité qui l'a signé) et `API_TLS_NAME` (le
+  nom qu'il porte) ; `API_CA_PATH` est obligatoire.
 
 L'image est publiée sur Docker Hub (`remialban/hypervisor-ui`) par
 `.github/workflows/cd.yml` à chaque push sur `main` (tag `latest`) et à chaque

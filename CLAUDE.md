@@ -67,7 +67,7 @@ npx ng build            # DOIT finir sans erreur NI avertissement
   Utilisez `npm run mock:full` pour tester les actions.
 - **Docker** : `Dockerfile` (étapes `build`, `mock`, `web` = nginx sans root sur 8080), `docker/nginx.conf.template`
   (relaie `/api`, `/ping`, `/swagger-ui`, `/api-docs`, `/mock-novnc` vers `${API_UPSTREAM}` ; index.html pour les
-  routes Angular). `docker-compose.yml` : haproxy (HTTPS) → ui (nginx, sans port publié), qui rejoint le réseau de l'API (`hypervisor-api_hypervisor-net`) et lui parle par son HAProxy (`api-haproxy:8000`) ;
+  routes Angular). `docker-compose.yml` : haproxy (HTTPS) → ui (nginx, sans port publié), qui rejoint le réseau de l'API (`hypervisor-api_hypervisor-net`) et lui parle par son HAProxy (`https://api-haproxy:9443`, certificat vérifié : `API_CA_PATH`, `API_TLS_NAME`) ;
   `docker-compose.mock.yml` le remplace par la fausse API (`HOST=0.0.0.0`, `PUBLIC_URL` pour la fausse console).
   Variables : `.env.example` (à copier en `.env`, ignoré par git).
   HTTPS : `haproxy/haproxy.cfg` (TLS_CERT_PATH et TLS_KEY_PATH obligatoires, HTTP_PORT, HTTPS_PORT ;
