@@ -8,7 +8,7 @@ Angular 21 · Bootstrap 5 · Angular CDK (modales).
 > **Jamais fait d'Angular ni de TypeScript ?** Lancez le projet et ouvrez la page
 > **Apprendre** : dix-huit leçons courtes, avec le code et son résultat en direct
 > (les dix premières pour les bases, une partie « Avancé » pour le routage, les
-> modales, le ContextBridge, les signals avancés, RxJS, l'injection et l'authentification).
+> modales, le ResourceCache, les signals avancés, RxJS, l'injection et l'authentification).
 > Ensuite, lisez [GUIDE.md](GUIDE.md).
 
 ## Démarrer
@@ -115,12 +115,12 @@ src/app/
 │   ├── lessons/             Les leçons de la page Apprendre
 │   ├── shell/               La barre latérale
 │   └── vm-list/, ...        Les composants métier (listes, formulaires)
-├── services/                Les appels à l'API, les modales, le ContextBridge
+├── services/                Les appels à l'API, les modales, le ResourceCache
 ├── models/                  Les types des données (Hypervisor, VirtualMachine...)
 ├── interceptors/            Le jeton de connexion (auth) et l'intercepteur d'erreurs HTTP
 ├── guards/                  Les gardes de routes : connecté, administrateur
 ├── errors/                  La traduction des erreurs de l'API
-├── config/                  Les réglages du ContextBridge
+├── config/                  Les réglages du ResourceCache
 └── utils/                   Petites fonctions utilitaires
 ```
 
@@ -179,7 +179,7 @@ Quatre briques, reprises d'un projet en production :
    transforme en `AppError`, métier (« Hyperviseur injoignable ») ou technique
    (panne, avec des détails dépliables). Une page affiche toute erreur avec
    `<app-error-panel [error]="error" />`.
-3. **Le ContextBridge** (`services/context-bridge.service.ts`) : passer une
+3. **Le ResourceCache** (`services/resource-cache.service.ts`) : passer une
    donnée d'une page à l'autre sans la recopier dans l'adresse.
    `prime('hypervisor', id, h)` la range, `resolve('hypervisor', id)` la relit,
    depuis l'API si besoin. Leçon 14 de la page Apprendre.
@@ -210,4 +210,4 @@ besoin d'y toucher.
 ## Limites connues
 
 - Une seule modale ouverte à la fois.
-- Le ContextBridge ne gère pas encore les dépendances entre types de données.
+- Le ResourceCache ne gère pas encore les dépendances entre types de données.

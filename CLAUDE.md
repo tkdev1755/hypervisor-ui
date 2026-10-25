@@ -103,12 +103,12 @@ src/app/
 │       user-form-modal, user-quota-modal, user-password-modal, password-form-modal,
 │       group-form-modal, group-member-modal, group-subgroup-modal, user-group-list, user-groups-modal   (composants métier)
 ├── services/             auth (session, jetons), hypervisor, vm, template, lab, group, share (prêts), user, admin (réglages, audit, accès),
-│                         job, inventory (arbre de la barre latérale), infrastructure (API), modal (+ modal-ref), context-bridge
+│                         job, inventory (arbre de la barre latérale), infrastructure (API), modal (+ modal-ref), resource-cache
 ├── models/               types recopiés de src/models.rs de l'API, et app-error.model.ts
 ├── interceptors/         auth.interceptor.ts (jeton + refresh), error.interceptor.ts
 ├── guards/               auth.guard.ts (authGuard, adminGuard)
 ├── errors/               error-mapper.ts (contrat + token), hypervisor-api-error-mapper.ts (catalogue FR)
-├── config/               context-descriptors.ts
+├── config/               resource-descriptors.ts
 └── utils/                api-context.ts (étiquette HTTP par API), layout.ts (alignements),
                           vm-access.ts (droits sur une VM), quota.ts (lignes de quota),
                           packer-example.ts (exemple Debian 12, lecture de vm_name)
@@ -154,13 +154,13 @@ mainteneur a conçue en entreprise. Respectez leur contrat.
 - Nouvelle API appelée : un nom dans `ApiName` (`utils/api-context.ts`), un
   nouveau mapper, `provideErrorMapper(...)` dans `app.config.ts`.
 
-### ContextBridgeService
+### ResourceCacheService
 
 - Cache mémoire `type::id`. `prime()` range, `peek()` lit, `resolve()` lit ou
-  recharge via le descripteur (`config/context-descriptors.ts`), avec
+  recharge via le descripteur (`config/resource-descriptors.ts`), avec
   déduplication des appels simultanés (`shareReplay`).
-- Nouveau type : une ligne dans `ContextTypes`
-  (`services/context-bridge.service.ts`) + un descripteur.
+- Nouveau type : une ligne dans `ResourceTypes`
+  (`services/resource-cache.service.ts`) + un descripteur.
 - Penser à `invalidate()` après une modification ou une suppression.
 - Volontairement absent : la résolution de dépendances entre types et la
   détection de cycles (présentes dans la version d'origine). À n'ajouter que
@@ -198,7 +198,7 @@ mainteneur a conçue en entreprise. Respectez leur contrat.
 - `403` = « pas le droit » ; `404` = « aucun droit sur cette ressource » (elle peut exister) : ne pas
   les distinguer pour l'utilisateur. Un quota dépassé est un 403 dont le message contient
   `Quota exceeded` : le mapper en tire un texte français (`QUOTA_EXCEEDED`).
-- À la déconnexion, `AuthService` vide tout ce qui dépend des droits : jetons, `ContextBridge`
+- À la déconnexion, `AuthService` vide tout ce qui dépend des droits : jetons, `ResourceCache`
   (un hyperviseur en cache montre son `uri` à un admin), `InventoryService`. Tout nouveau cache
   dépendant de l'utilisateur doit y être vidé aussi.
 - `VirtualMachine.owner` / `access` (`'admin' | 'owner' | 'shared'`) pilotent l'affichage
@@ -258,9 +258,9 @@ mainteneur a conçue en entreprise. Respectez leur contrat.
   utiliser les mêmes. Un arrêt propre (ACPI) peut durer : `vm-list` interroge alors la liste toutes les
   2 secondes, au plus une minute (« Arrêt en cours… »), puis laisse « Forcer ».
 - **Leçons avancées (11 à 18)** : leurs démos utilisent les vrais services
-  (`ModalService`, `ContextBridgeService`, `Router`, les jetons d'injection)
+  (`ModalService`, `ResourceCacheService`, `Router`, les jetons d'injection)
   mais **ne doivent jamais modifier quoi que ce soit côté API** : modales
-  simulées avec `timer` / `throwError`, ContextBridge avec un identifiant
+  simulées avec `timer` / `throwError`, ResourceCache avec un identifiant
   fictif (`demo-lecon`) dont seul le `GET` part (404 attendu). Gardez cette
   règle pour toute nouvelle leçon : le port 3000 peut être la vraie API.
 - **Leçons : code d'exemple** : l'exemple est une chaîne TypeScript

@@ -19,13 +19,13 @@ recettes et les exercices.
 | **Route** | L'association d'une adresse (`/hypervisors`) et d'une page. |
 | **Paramètre d'adresse** | Une partie variable de l'adresse (`:id`), reçue par la page dans un `input()` du même nom (leçon 11). |
 | **ModalRef** | La « télécommande » d'une modale ouverte : `close(résultat)` pour la fermer, `afterClosed$` pour récupérer le résultat (leçons 12 et 13). |
-| **ContextBridge** | Un cache en mémoire pour passer une donnée d'une page à l'autre : `prime`, `peek`, `resolve`, `invalidate` (leçon 14). |
+| **ResourceCache** | Un cache en mémoire pour passer une donnée d'une page à l'autre : `prime`, `peek`, `resolve`, `invalidate` (leçon 14). |
 | **linkedSignal / effect** | Une valeur calculée mais modifiable / une action déclenchée par un changement de signal (leçon 15). |
 | **Opérateur RxJS** | Une étape de `.pipe(...)` qui transforme un Observable : `switchMap`, `filter`, `take`… (leçon 16). |
 | **InjectionToken** | Un « nom » pour injecter autre chose qu'une classe, par exemple une liste de mappers d'erreurs (leçon 17). |
 | **Jeton (access / refresh)** | La « clé » donnée à la connexion : l'access token (15 min) accompagne chaque requête, le refresh token (usage unique) en fournit un nouveau (leçon 18). |
 | **Garde de route** | Une fonction qui autorise ou refuse l'affichage d'une page : `authGuard` (connecté), `adminGuard` (administrateur). |
-| **Générique** | Un type paramétré (`<K extends ContextType>`) qui s'adapte à ce qu'on lui donne (leçon 17). |
+| **Générique** | Un type paramétré (`<K extends ResourceType>`) qui s'adapte à ce qu'on lui donne (leçon 17). |
 
 ## 2. Lire un écran
 
