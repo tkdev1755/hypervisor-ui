@@ -15,7 +15,7 @@
       d'interface, documentés en tête de leur `.ts`.
 - [x] Moteur d'erreurs : étiquette par API, intercepteur, mapper avec
       catalogue français, `AppError` métier / technique, `<app-error-panel>`.
-- [x] ContextBridgeService (cache `type::id`, rechargement, déduplication).
+- [x] ResourceCacheService (cache `type::id`, rechargement, déduplication).
 - [x] Modales : service CDK Overlay, `ModalRef`, cadre `<app-modal-shell>`
       (form / loading / success / error), modale de confirmation.
 - [x] Fausse API Node (`npm run mock`, `npm run mock:full`).
@@ -54,7 +54,7 @@
       12 ouvrir une modale (`ModalService`, `afterClosed$`, valeurs de résultat),
       13 écrire sa modale (`modal-shell`, états, `closeGuard`, projection de contenu ;
       modale d'exemple `lessons/demo-rename-modal`),
-      14 ContextBridge (`prime` / `peek` / `resolve` / `invalidate`, descripteurs),
+      14 ResourceCache (`prime` / `peek` / `resolve` / `invalidate`, descripteurs),
       15 signals avancés (`computed`, `linkedSignal`, `effect` + `untracked`),
       16 RxJS (`timer`, `switchMap`, `filter`, `take`, `takeUntilDestroyed`, suivi d'une tâche),
       17 injection et génériques (`InjectionToken`, `multi: true`, `provideXxx`, `keyof`).
@@ -270,7 +270,7 @@ un 409 affiche un message métier clair.
 
 ### Étape 7 — Pédagogie (au fil de l'eau)
 
-- FAIT le 14 octobre : routage, RxJS, modales, ContextBridge, signals avancés, injection
+- FAIT le 14 octobre : routage, RxJS, modales, ResourceCache, signals avancés, injection
   (partie « Avancé », leçons 11 à 17). Reste, si l'équipe bloque : formulaires et validation
   plus détaillés, `@defer`.
 - Garder les exemples très simples et les noms en français dans les leçons.
@@ -295,9 +295,10 @@ un 409 affiche un message métier clair.
 | 13 octobre 2026 | Réécriture : structure classique, trois fichiers par composant, mise en page à la Flutter, page Apprendre. |
 | 14 octobre 2026 | CLAUDE.md et ce plan ; écarts avec l'API relevés (section 2). |
 | 14 octobre 2026 | MVP : création complète, clonage, suppression, console VNC, fausse API à jour. |
-| 14 octobre 2026 | Formation avancée : 7 leçons (routage, modales, ContextBridge, signals, RxJS, injection). |
+| 14 octobre 2026 | Formation avancée : 7 leçons (routage, modales, ResourceCache, signals, RxJS, injection). |
 | 22 octobre 2026 | Branche `infra` (Martageix) : création et suppression de disques et réseaux, clic sur une VM. |
 | 23 octobre 2026 | Branche `auth` : authentification, rôles, prêt de VM, quotas, administration, fausse API, leçon 18. |
+| 25 octobre 2026 | `ContextBridge` renommé `ResourceCache` (service, types, descripteurs `resource-descriptors.ts`, leçon 14). |
 | 24 octobre 2026 | `main` (abdellatif212) fusionné dans `auth` : récapitulatif et filtres des VM, suivi de l'arrêt, modes de disque (nouveau / existant / aucun). Corrigés au passage : polling borné à 1 minute, statut `shutting_down`, nom de VM sans point initial, commentaires pédagogiques restaurés, fausse API en `stopped`. |
 | 25 octobre 2026 | Templates Packer : onglet « Templates », construction (admin), création de VM depuis un template, fausse API. |
 | 25 octobre 2026 | Templates : versions, reconstruction, arrêt, journal en direct, accès restreint (nouveau contrat de l'API). |
