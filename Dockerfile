@@ -38,7 +38,7 @@ FROM nginxinc/nginx-unprivileged:1.27-alpine AS web
 
 # Adresse de l'API vue depuis le conteneur. Le fichier modèle ci-dessous est complété au
 # démarrage par l'image nginx (envsubst) : ${API_UPSTREAM} y est remplacé par cette valeur.
-ENV API_UPSTREAM=http://api:3000
+ENV API_UPSTREAM=http://api-haproxy:8000
 
 COPY docker/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist/hypervisor-ui/browser /usr/share/nginx/html

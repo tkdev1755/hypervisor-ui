@@ -1,6 +1,7 @@
 # Configuration nginx du front (modèle : ${API_UPSTREAM} est remplacé au démarrage du conteneur).
 #
-#   /api/…, /ping, /swagger-ui, /api-docs/…  → l'API (comme proxy.conf.json avec ng serve)
+#   /api/…, /ping, /swagger-ui, /api-docs/…  → l'API, par le HAProxy de l'API
+#                                              (http://api-haproxy:8000 ; comme proxy.conf.json avec ng serve)
 #   /mock-novnc                               → la fausse console de la fausse API (404 sur la vraie)
 #   tout le reste                             → l'application Angular (index.html pour ses routes)
 
@@ -10,6 +11,15 @@ server {
 
     root /usr/share/nginx/html;
     index index.html;
+
+    # L'adresse du navigateur : nginx la lit dans le X-Forwarded-For que le HAProxy du front
+    # ajoute (sa dernière valeur), mais seulement quand la requête vient d'un réseau Docker.
+    # $remote_addr devient alors l'adresse du navigateur, et le HAProxy de l'API peut limiter
+    # les connexions par navigateur, et non pour tout le front d'un bloc.
+    set_real_ip_from 172.16.0.0/12;
+    set_real_ip_from 10.0.0.0/8;
+    set_real_ip_from 192.168.0.0/16;
+    real_ip_header X-Forwarded-For;
 
     # Une configuration Packer peut être longue.
     client_max_body_size 10m;
@@ -23,8 +33,10 @@ server {
         proxy_http_version 1.1;
         proxy_set_header Host $http_host;
         proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        # Remplacé, pas complété : une seule valeur, l'adresse du navigateur, dont le HAProxy de
+        # l'API se sert (une valeur envoyée par le navigateur lui-même n'arrive jamais jusque-là).
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
         # Certaines opérations libvirt (hyperviseur distant par SSH) prennent du temps.
         proxy_read_timeout 120s;
     }

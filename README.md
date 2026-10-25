@@ -79,13 +79,15 @@ Puis ouvrir `https://<votre-domaine>`.
   path does not exist »). Pour essayer en local, `.env.example` donne la commande
   `openssl` qui crée un certificat auto-signé dans `./tls` (ignoré par git). La clé doit être lisible par l'UID 99 (l'utilisateur de
   haproxy dans le conteneur).
-- `http://` est redirigé vers `https://`. Ports : 80 et 443 par défaut ; si le
-  haproxy de l'API les occupe déjà sur la même machine, choisissez-en d'autres
-  (`HTTP_PORT=8081 HTTPS_PORT=8443`).
+- `http://` est redirigé vers `https://`. Ports : 80 et 443 (`HTTP_PORT`, `HTTPS_PORT`).
+  Ils sont réservés au front : sur la même machine, les HAProxy de l'API
+  (8081 / 8443) et de noVNC (6081 / 6443) utilisent d'autres ports.
 - haproxy limite aussi les tentatives de connexion (20 par 10 s et par adresse)
   et ajoute l'en-tête HSTS.
 - Le front rejoint le réseau Docker de l'API (`hypervisor-api_hypervisor-net`,
-  réglable avec `API_NETWORK`) et lui parle par `http://api:3000` (`API_UPSTREAM`).
+  réglable avec `API_NETWORK`) et lui parle par le HAProxy de l'API,
+  `http://api-haproxy:8000` (`API_UPSTREAM`) : une entrée interne, non publiée, qui
+  applique les mêmes règles que l'accès HTTPS à l'API.
 
 L'image est publiée sur Docker Hub (`remialban/hypervisor-ui`) par
 `.github/workflows/cd.yml` à chaque push sur `main` (tag `latest`) et à chaque
