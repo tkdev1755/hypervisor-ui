@@ -1,15 +1,15 @@
 import { Provider, inject } from '@angular/core';
 
 import { HypervisorService } from '../services/hypervisor.service';
-import { provideContextDescriptor } from '../services/context-bridge.service';
+import { provideResourceDescriptor } from '../services/resource-cache.service';
 
 /**
- * Apprend au ContextBridgeService à recharger chaque type de donnée depuis
+ * Apprend au ResourceCacheService à recharger chaque type de donnée depuis
  * l'API quand il n'est pas en cache. Enregistré dans app.config.ts.
  */
-export function provideContextDescriptors(): Provider[] {
+export function provideResourceDescriptors(): Provider[] {
   return [
-    provideContextDescriptor(() => {
+    provideResourceDescriptor(() => {
       const hypervisors = inject(HypervisorService);
       return { type: 'hypervisor', fetch: (id: string) => hypervisors.get(id) };
     }),

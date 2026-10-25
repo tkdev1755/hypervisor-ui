@@ -21,7 +21,7 @@ import { AppError } from '@app/models/app-error.model';
 import { Hypervisor } from '@app/models/hypervisor.model';
 import { LabDetail, LabInstance, canManageLab, labLimitReached } from '@app/models/lab.model';
 import { AuthService } from '@app/services/auth.service';
-import { ContextBridgeService } from '@app/services/context-bridge.service';
+import { ResourceCacheService } from '@app/services/resource-cache.service';
 import { LabService } from '@app/services/lab.service';
 import { ModalService } from '@app/services/modal.service';
 
@@ -60,7 +60,7 @@ type Onglet = 'instances' | 'definition' | 'permissions';
 })
 export class LabDetailComponent implements OnInit {
   private readonly labs = inject(LabService);
-  private readonly bridge = inject(ContextBridgeService);
+  private readonly resourceCache = inject(ResourceCacheService);
   private readonly modal = inject(ModalService);
   private readonly router = inject(Router);
   protected readonly auth = inject(AuthService);
@@ -94,7 +94,7 @@ export class LabDetailComponent implements OnInit {
   protected readonly routers = computed(() => this.lab()?.vms.filter((vm) => vm.role === 'router').length ?? 0);
 
   ngOnInit(): void {
-    this.bridge.resolve('hypervisor', this.id()).subscribe({
+    this.resourceCache.resolve('hypervisor', this.id()).subscribe({
       next: (hypervisor) => this.hypervisor.set(hypervisor),
       error: () => undefined, // Le nom n'est qu'un détail d'affichage.
     });

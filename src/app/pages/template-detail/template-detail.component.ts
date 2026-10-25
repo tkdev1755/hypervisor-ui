@@ -28,7 +28,7 @@ import { Hypervisor } from '@app/models/hypervisor.model';
 import { Template, TemplateVersion, canManageTemplate, isBuilding, templateLimitReached } from '@app/models/template.model';
 import { VirtualMachine } from '@app/models/virtual-machine.model';
 import { AuthService } from '@app/services/auth.service';
-import { ContextBridgeService } from '@app/services/context-bridge.service';
+import { ResourceCacheService } from '@app/services/resource-cache.service';
 import { InventoryService } from '@app/services/inventory.service';
 import { ModalService } from '@app/services/modal.service';
 import { TemplateService } from '@app/services/template.service';
@@ -76,7 +76,7 @@ type Onglet = 'versions' | 'config' | 'permissions';
 })
 export class TemplateDetailComponent implements OnInit, OnDestroy {
   private readonly templates = inject(TemplateService);
-  private readonly bridge = inject(ContextBridgeService);
+  private readonly resourceCache = inject(ResourceCacheService);
   private readonly inventory = inject(InventoryService);
   private readonly modal = inject(ModalService);
   private readonly router = inject(Router);
@@ -140,7 +140,7 @@ export class TemplateDetailComponent implements OnInit, OnDestroy {
   private pollSub?: Subscription;
 
   ngOnInit(): void {
-    this.bridge.resolve('hypervisor', this.id()).subscribe({
+    this.resourceCache.resolve('hypervisor', this.id()).subscribe({
       next: (hypervisor) => this.hypervisor.set(hypervisor),
       error: () => undefined, // Le nom n'est qu'un détail d'affichage.
     });

@@ -3,7 +3,7 @@ import { ApplicationConfig, inject, provideAppInitializer, provideBrowserGlobalE
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 
 import { routes } from './app.routes';
-import { provideContextDescriptors } from './config/context-descriptors';
+import { provideResourceDescriptors } from './config/resource-descriptors';
 import { provideErrorMapper } from './errors/error-mapper';
 import { HypervisorApiErrorMapper } from './errors/hypervisor-api-error-mapper';
 import { authInterceptor } from './interceptors/auth.interceptor';
@@ -28,7 +28,7 @@ export const appConfig: ApplicationConfig = {
     // Moteur d'erreurs : un mapper par API appelée.
     provideErrorMapper(HypervisorApiErrorMapper),
 
-    // ContextBridgeService : comment recharger chaque type de donnée.
-    provideContextDescriptors(),
+    // ResourceCacheService : comment recharger chaque type de donnée.
+    provideResourceDescriptors(),
   ],
 };

@@ -7,7 +7,7 @@ import { ListTileComponent } from '@app/components/ui/list-tile/list-tile.compon
 import { ListComponent } from '@app/components/ui/list/list.component';
 import { TextComponent } from '@app/components/ui/text/text.component';
 import { ERROR_MAPPERS } from '@app/errors/error-mapper';
-import { CONTEXT_DESCRIPTORS } from '@app/services/context-bridge.service';
+import { RESOURCE_DESCRIPTORS } from '@app/services/resource-cache.service';
 import { LessonComponent } from '../lesson/lesson.component';
 
 /** Leçon 17 (Avancé) : jetons d'injection, listes de fournisseurs et génériques TypeScript. */
@@ -35,27 +35,27 @@ providers: [
 const mappers = inject(ERROR_MAPPERS);
 
 // optional: true → pas d'erreur si personne n'a rien fourni
-const descripteurs = inject(CONTEXT_DESCRIPTORS, { optional: true }) ?? [];
+const descripteurs = inject(RESOURCE_DESCRIPTORS, { optional: true }) ?? [];
 
 
 // --- 2. Les génériques : une fonction qui s'adapte au type qu'on lui donne ---
-export interface ContextTypes {
+export interface ResourceTypes {
   hypervisor: Hypervisor;
 }
-export type ContextType = keyof ContextTypes;      // 'hypervisor' (et plus tard 'vm'...)
+export type ResourceType = keyof ResourceTypes;      // 'hypervisor' (et plus tard 'vm'...)
 
 // K est « l'un des types du catalogue » ; la valeur DOIT correspondre à ce K
-prime<K extends ContextType>(type: K, id: string, value: ContextTypes[K]): void
+prime<K extends ResourceType>(type: K, id: string, value: ResourceTypes[K]): void
 
-this.bridge.prime('hypervisor', id, hypervisor);   // OK
-this.bridge.prime('hypervisor', id, 42);           // ERREUR de compilation
-this.bridge.prime('vm', id, hypervisor);           // ERREUR : le type 'vm' n'existe pas`;
+this.resourceCache.prime('hypervisor', id, hypervisor);   // OK
+this.resourceCache.prime('hypervisor', id, 42);           // ERREUR de compilation
+this.resourceCache.prime('vm', id, hypervisor);           // ERREUR : le type 'vm' n'existe pas`;
 
   /** Écrit ici car, dans le .html, des accolades seraient interprétées par Angular. */
   readonly objetFournisseur = '{ provide: JETON, useClass: MaClasse, multi: true }';
 
-  /** Tout ce qui a été ajouté au jeton CONTEXT_DESCRIPTORS (une ligne par provideContextDescriptor). */
-  readonly descripteurs = (inject(CONTEXT_DESCRIPTORS, { optional: true }) ?? []).map((descripteur) => ({
+  /** Tout ce qui a été ajouté au jeton RESOURCE_DESCRIPTORS (une ligne par provideResourceDescriptor). */
+  readonly descripteurs = (inject(RESOURCE_DESCRIPTORS, { optional: true }) ?? []).map((descripteur) => ({
     type: descripteur.type,
     rechargeable: !!descripteur.fetch,
   }));

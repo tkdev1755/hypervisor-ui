@@ -8,11 +8,11 @@
   </app-text>
   <app-text>
     C'est le modèle de deux briques du projet : un mapper d'erreurs par API, et un descripteur par type de donnée du
-    ContextBridge. Pour ajouter une API ou un type, on <strong>ajoute</strong> une ligne dans
+    ResourceCache. Pour ajouter une API ou un type, on <strong>ajoute</strong> une ligne dans
     <app-inline-code>app.config.ts</app-inline-code> ; le code existant ne change pas.
   </app-text>
   <app-text>
-    <strong>Les génériques.</strong> <app-inline-code>K extends ContextType</app-inline-code> signifie « K est l'un de ces
+    <strong>Les génériques.</strong> <app-inline-code>K extends ResourceType</app-inline-code> signifie « K est l'un de ces
     types ». Le reste de la signature en dépend : le type de <app-inline-code>value</app-inline-code> se déduit du premier
     argument. L'éditeur refuse une donnée qui ne correspond pas, avant même de lancer l'application.
     <app-inline-code>keyof</app-inline-code> produit l'union des noms de champs d'une interface.
@@ -24,11 +24,11 @@
   </app-callout>
   <app-callout type="tip" title="Essayez">
     Dans <app-inline-code>lesson-injection.component.ts</app-inline-code>, écrivez
-    <app-inline-code>bridge.prime('hypervisor', 'x', 42)</app-inline-code> : l'éditeur souligne l'erreur en rouge.
+    <app-inline-code>resourceCache.prime('hypervisor', 'x', 42)</app-inline-code> : l'éditeur souligne l'erreur en rouge.
   </app-callout>
 
   <app-column demo [gap]="12">
-    <app-text variant="small" color="muted">Contenu du jeton CONTEXT_DESCRIPTORS :</app-text>
+    <app-text variant="small" color="muted">Contenu du jeton RESOURCE_DESCRIPTORS :</app-text>
     <app-list>
       @for (descripteur of descripteurs; track descripteur.type) {
         <app-list-tile

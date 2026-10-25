@@ -16,7 +16,7 @@ import { LessonVariablesComponent } from '@app/components/lessons/lesson-variabl
 import { LessonRoutingComponent } from '@app/components/lessons/lesson-routing/lesson-routing.component';
 import { LessonModalsComponent } from '@app/components/lessons/lesson-modals/lesson-modals.component';
 import { LessonCustomModalComponent } from '@app/components/lessons/lesson-custom-modal/lesson-custom-modal.component';
-import { LessonContextBridgeComponent } from '@app/components/lessons/lesson-context-bridge/lesson-context-bridge.component';
+import { LessonResourceCacheComponent } from '@app/components/lessons/lesson-resource-cache/lesson-resource-cache.component';
 import { LessonAdvancedSignalsComponent } from '@app/components/lessons/lesson-advanced-signals/lesson-advanced-signals.component';
 import { LessonRxjsComponent } from '@app/components/lessons/lesson-rxjs/lesson-rxjs.component';
 import { LessonInjectionComponent } from '@app/components/lessons/lesson-injection/lesson-injection.component';
@@ -44,7 +44,7 @@ type Partie = 'typescript' | 'angular' | 'layout' | 'avance';
     LessonRoutingComponent,
     LessonModalsComponent,
     LessonCustomModalComponent,
-    LessonContextBridgeComponent,
+    LessonResourceCacheComponent,
     LessonAdvancedSignalsComponent,
     LessonRxjsComponent,
     LessonInjectionComponent,

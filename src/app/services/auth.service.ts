@@ -6,7 +6,7 @@ import { Observable, catchError, finalize, map, of, shareReplay, switchMap, tap,
 import { AuthConfig, ChangePassword, Credentials, TokenResponse } from '../models/auth.model';
 import { User } from '../models/user.model';
 import { apiContext } from '../utils/api-context';
-import { ContextBridgeService } from './context-bridge.service';
+import { ResourceCacheService } from './resource-cache.service';
 import { InventoryService } from './inventory.service';
 
 /** Où le refresh token est gardé pour survivre à un rechargement de page (effacé à la fermeture de l'onglet). */
@@ -32,7 +32,7 @@ const REFRESH_KEY = 'hypervisor.refresh_token';
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
-  private readonly bridge = inject(ContextBridgeService);
+  private readonly resourceCache = inject(ResourceCacheService);
   private readonly inventory = inject(InventoryService);
   private readonly context = apiContext('hypervisor-api');
 
@@ -163,7 +163,7 @@ export class AuthService {
       // Stockage indisponible (navigation privée stricte) : rien à effacer.
     }
     // Un hyperviseur gardé en cache montre son URI à un admin : il ne doit pas être revu par le prochain utilisateur.
-    this.bridge.invalidate('hypervisor');
+    this.resourceCache.invalidate('hypervisor');
     this.inventory.clear();
   }
 

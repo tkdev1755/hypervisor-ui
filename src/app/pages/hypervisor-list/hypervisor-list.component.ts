@@ -13,7 +13,7 @@ import { ResourceCardComponent } from '@app/components/ui/resource-card/resource
 import { AppError } from '@app/models/app-error.model';
 import { Hypervisor } from '@app/models/hypervisor.model';
 import { AuthService } from '@app/services/auth.service';
-import { ContextBridgeService } from '@app/services/context-bridge.service';
+import { ResourceCacheService } from '@app/services/resource-cache.service';
 import { HypervisorService } from '@app/services/hypervisor.service';
 import { InventoryService } from '@app/services/inventory.service';
 import { ModalService } from '@app/services/modal.service';
@@ -32,7 +32,7 @@ export class HypervisorListComponent implements OnInit {
   // Les services dont la page a besoin, obtenus par injection.
   private readonly hypervisorService = inject(HypervisorService);
   private readonly modal = inject(ModalService);
-  private readonly bridge = inject(ContextBridgeService);
+  private readonly resourceCache = inject(ResourceCacheService);
   private readonly router = inject(Router);
   private readonly inventory = inject(InventoryService);
   /** Seul un administrateur ajoute, modifie ou supprime un hyperviseur. */
@@ -63,9 +63,9 @@ export class HypervisorListComponent implements OnInit {
     });
   }
 
-  /** On range l'hyperviseur dans le ContextBridge, puis on navigue avec son seul id. */
+  /** On range l'hyperviseur dans le ResourceCache, puis on navigue avec son seul id. */
   protected open(hypervisor: Hypervisor): void {
-    this.bridge.prime('hypervisor', hypervisor.id, hypervisor);
+    this.resourceCache.prime('hypervisor', hypervisor.id, hypervisor);
     this.router.navigate(['/hypervisors', hypervisor.id]);
   }
 
@@ -85,7 +85,7 @@ export class HypervisorListComponent implements OnInit {
       .open<HypervisorFormModalComponent, Hypervisor>(HypervisorFormModalComponent, { inputs: { hypervisor } })
       .afterClosed$.subscribe((updated) => {
         if (updated) {
-          this.bridge.invalidate('hypervisor', hypervisor.id);
+          this.resourceCache.invalidate('hypervisor', hypervisor.id);
           this.load();
           this.inventory.refresh();
         }
@@ -107,7 +107,7 @@ export class HypervisorListComponent implements OnInit {
       })
       .afterClosed$.subscribe((deleted) => {
         if (deleted) {
-          this.bridge.invalidate('hypervisor', hypervisor.id);
+          this.resourceCache.invalidate('hypervisor', hypervisor.id);
           this.load();
           this.inventory.refresh();
         }

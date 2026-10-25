@@ -46,7 +46,7 @@ this.abonnement.unsubscribe();                  // ou à la main, par exemple su
 
 // Un Observable est PARESSEUX et FROID : rien ne part avant subscribe(),
 // et chaque subscribe() relance tout depuis le début.
-// shareReplay partage UNE exécution entre plusieurs abonnés (voir le ContextBridge).`;
+// shareReplay partage UNE exécution entre plusieurs abonnés (voir le ResourceCache).`;
 
   readonly etat = signal<'repos' | 'en-cours' | 'terminee' | 'annulee'>('repos');
   readonly progression = signal(0);

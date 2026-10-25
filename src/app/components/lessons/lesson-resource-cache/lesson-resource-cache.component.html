@@ -1,11 +1,11 @@
-<app-lesson [number]="14" title="Le ContextBridge : passer une donnée d'une page à l'autre" [code]="code" codeTitle="context-bridge">
+<app-lesson [number]="14" title="Le ResourceCache : passer une donnée d'une page à l'autre" [code]="code" codeTitle="resource-cache">
   <app-text>
     <strong>Le problème.</strong> La page « liste » a déjà chargé l'hyperviseur sur lequel on clique. Pour la page « détail »,
     on pourrait recopier tous ses champs dans l'URL (fragile, et modifiable par l'utilisateur), ou le recharger depuis l'API
     (une requête inutile). Dans les deux cas, ce n'est pas satisfaisant.
   </app-text>
   <app-text>
-    <strong>La solution.</strong> Le <app-inline-code>ContextBridgeService</app-inline-code> est un cache en mémoire, rangé par
+    <strong>La solution.</strong> Le <app-inline-code>ResourceCacheService</app-inline-code> est un cache en mémoire, rangé par
     <app-inline-code>type::id</app-inline-code>. La liste y <em>range</em> la donnée (<app-inline-code>prime</app-inline-code>) ;
     le détail la <em>relit</em> (<app-inline-code>resolve</app-inline-code>). L'URL ne garde que l'identifiant.
   </app-text>
@@ -24,8 +24,8 @@
     <app-inline-code>invalidate</app-inline-code>, sinon la page détail affichera l'ancienne version.
   </app-callout>
   <app-callout title="Ajouter un nouveau type (une VM, par exemple)">
-    1. une ligne dans <app-inline-code>ContextTypes</app-inline-code> ; 2. un descripteur dans
-    <app-inline-code>config/context-descriptors.ts</app-inline-code> ; 3. <app-inline-code>prime</app-inline-code> d'un côté,
+    1. une ligne dans <app-inline-code>ResourceTypes</app-inline-code> ; 2. un descripteur dans
+    <app-inline-code>config/resource-descriptors.ts</app-inline-code> ; 3. <app-inline-code>prime</app-inline-code> d'un côté,
     <app-inline-code>resolve</app-inline-code> de l'autre. TypeScript vérifie que la donnée rangée a bien la forme du type.
   </app-callout>
   <app-callout type="tip" title="Essayez">

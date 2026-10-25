@@ -21,7 +21,7 @@ import { AppError } from '@app/models/app-error.model';
 import { Hypervisor } from '@app/models/hypervisor.model';
 import { VirtualMachine } from '@app/models/virtual-machine.model';
 import { AuthService } from '@app/services/auth.service';
-import { ContextBridgeService } from '@app/services/context-bridge.service';
+import { ResourceCacheService } from '@app/services/resource-cache.service';
 import { InventoryService } from '@app/services/inventory.service';
 import { ModalService } from '@app/services/modal.service';
 import { ShareService } from '@app/services/share.service';
@@ -54,7 +54,7 @@ import { canManage } from '@app/utils/vm-access';
 })
 export class VmDetailComponent implements OnInit {
   private readonly vms = inject(VmService);
-  private readonly bridge = inject(ContextBridgeService);
+  private readonly resourceCache = inject(ResourceCacheService);
   private readonly inventory = inject(InventoryService);
   private readonly modal = inject(ModalService);
   private readonly router = inject(Router);
@@ -71,7 +71,7 @@ export class VmDetailComponent implements OnInit {
   protected readonly busy = signal(false);
 
   ngOnInit(): void {
-    this.bridge.resolve('hypervisor', this.id()).subscribe({
+    this.resourceCache.resolve('hypervisor', this.id()).subscribe({
       next: (hypervisor) => this.hypervisor.set(hypervisor),
       error: () => undefined, // Le nom n'est qu'un détail d'affichage.
     });

@@ -9,16 +9,16 @@ import { InlineCodeComponent } from '@app/components/ui/inline-code/inline-code.
 import { TextComponent } from '@app/components/ui/text/text.component';
 import { AppError, isAppError } from '@app/models/app-error.model';
 import { Hypervisor } from '@app/models/hypervisor.model';
-import { ContextBridgeService } from '@app/services/context-bridge.service';
+import { ResourceCacheService } from '@app/services/resource-cache.service';
 import { LessonComponent } from '../lesson/lesson.component';
 
 /** L'identifiant et la donnée utilisés par la démonstration (aucun vrai hyperviseur n'a cet id). */
 const ID_DEMO = 'demo-lecon';
 const HYPERVISEUR_DEMO: Hypervisor = { id: ID_DEMO, name: 'kvm-demo', uri: 'qemu:///system', status: 'connected' };
 
-/** Leçon 14 (Avancé) : le ContextBridgeService, ou comment passer une donnée d'une page à l'autre. */
+/** Leçon 14 (Avancé) : le ResourceCacheService, ou comment passer une donnée d'une page à l'autre. */
 @Component({
-  selector: 'app-lesson-context-bridge',
+  selector: 'app-lesson-resource-cache',
   imports: [
     LessonComponent,
     ColumnComponent,
@@ -29,39 +29,39 @@ const HYPERVISEUR_DEMO: Hypervisor = { id: ID_DEMO, name: 'kvm-demo', uri: 'qemu
     ButtonComponent,
     ErrorPanelComponent,
   ],
-  templateUrl: './lesson-context-bridge.component.html',
-  styleUrl: './lesson-context-bridge.component.scss',
+  templateUrl: './lesson-resource-cache.component.html',
+  styleUrl: './lesson-resource-cache.component.scss',
 })
-export class LessonContextBridgeComponent {
-  private readonly bridge = inject(ContextBridgeService);
+export class LessonResourceCacheComponent {
+  private readonly resourceCache = inject(ResourceCacheService);
 
-  readonly code = `// 1. Le catalogue des types (services/context-bridge.service.ts)
-export interface ContextTypes {
+  readonly code = `// 1. Le catalogue des types (services/resource-cache.service.ts)
+export interface ResourceTypes {
   hypervisor: Hypervisor;     // un nouveau type = une ligne ici
 }
 
-// 2. Son descripteur : comment le recharger (config/context-descriptors.ts)
-provideContextDescriptor(() => {
+// 2. Son descripteur : comment le recharger (config/resource-descriptors.ts)
+provideResourceDescriptor(() => {
   const hypervisors = inject(HypervisorService);
   return { type: 'hypervisor', fetch: (id) => hypervisors.get(id) };
 }),
 
 // 3. La page LISTE range ce qu'elle vient de charger, et ne met que l'id dans l'URL
 open(hypervisor: Hypervisor): void {
-  this.bridge.prime('hypervisor', hypervisor.id, hypervisor);
+  this.resourceCache.prime('hypervisor', hypervisor.id, hypervisor);
   this.router.navigate(['/hypervisors', hypervisor.id]);
 }
 
 // 4. La page DÉTAIL relit : le cache si possible, l'API sinon
 ngOnInit(): void {
-  this.bridge.resolve('hypervisor', this.id()).subscribe({
+  this.resourceCache.resolve('hypervisor', this.id()).subscribe({
     next: (hypervisor) => this.hypervisor.set(hypervisor),
     error: (error: unknown) => { /* afficher l'erreur */ },
   });
 }
 
 // 5. Après une modification ou une suppression : OUBLIER la copie périmée
-this.bridge.invalidate('hypervisor', hypervisor.id);
+this.resourceCache.invalidate('hypervisor', hypervisor.id);
 
 // Les quatre méthodes
 //   prime(type, id, valeur)   ranger
@@ -74,20 +74,20 @@ this.bridge.invalidate('hypervisor', hypervisor.id);
   readonly erreur = signal<AppError | null>(null);
 
   ranger(): void {
-    this.bridge.prime('hypervisor', ID_DEMO, HYPERVISEUR_DEMO);
+    this.resourceCache.prime('hypervisor', ID_DEMO, HYPERVISEUR_DEMO);
     this.noter('prime → « kvm-demo » rangé dans le cache');
   }
 
   lire(): void {
-    const valeur = this.bridge.peek('hypervisor', ID_DEMO);
+    const valeur = this.resourceCache.peek('hypervisor', ID_DEMO);
     this.noter(valeur ? 'peek → trouvé : ' + valeur.name : 'peek → rien en cache (undefined)');
   }
 
   resoudre(): void {
-    const origine = this.bridge.peek('hypervisor', ID_DEMO) ? 'cache' : 'appel à l’API';
+    const origine = this.resourceCache.peek('hypervisor', ID_DEMO) ? 'cache' : 'appel à l’API';
     this.enCours.set(true);
     this.erreur.set(null);
-    this.bridge.resolve('hypervisor', ID_DEMO).subscribe({
+    this.resourceCache.resolve('hypervisor', ID_DEMO).subscribe({
       next: (valeur) => {
         this.noter('resolve (' + origine + ') → ' + valeur.name);
         this.enCours.set(false);
@@ -101,7 +101,7 @@ this.bridge.invalidate('hypervisor', hypervisor.id);
   }
 
   oublier(): void {
-    this.bridge.invalidate('hypervisor', ID_DEMO);
+    this.resourceCache.invalidate('hypervisor', ID_DEMO);
     this.noter('invalidate → cache vidé pour cet id');
   }
 

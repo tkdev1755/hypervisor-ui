@@ -14,7 +14,7 @@ import { VmListComponent } from '@app/components/vm-list/vm-list.component';
 import { AppError, isAppError } from '@app/models/app-error.model';
 import { Hypervisor } from '@app/models/hypervisor.model';
 import { AuthService } from '@app/services/auth.service';
-import { ContextBridgeService } from '@app/services/context-bridge.service';
+import { ResourceCacheService } from '@app/services/resource-cache.service';
 
 type Onglet = 'vms' | 'templates' | 'labs' | 'disks' | 'networks' | 'access';
 
@@ -23,7 +23,7 @@ type Onglet = 'vms' | 'templates' | 'labs' | 'disks' | 'networks' | 'access';
  *
  * `id` vient de l'adresse (/hypervisors/:id) : le routeur le passe directement
  * en input() (grâce à withComponentInputBinding dans app.config.ts).
- * L'hyperviseur vient du ContextBridgeService : déjà en cache si on arrive
+ * L'hyperviseur vient du ResourceCacheService : déjà en cache si on arrive
  * depuis la liste, rechargé depuis l'API sinon.
  */
 @Component({
@@ -45,7 +45,7 @@ type Onglet = 'vms' | 'templates' | 'labs' | 'disks' | 'networks' | 'access';
   styleUrl: './hypervisor-detail.component.scss',
 })
 export class HypervisorDetailComponent implements OnInit {
-  private readonly bridge = inject(ContextBridgeService);
+  private readonly resourceCache = inject(ResourceCacheService);
   private readonly auth = inject(AuthService);
 
   readonly id = input.required<string>();
@@ -69,7 +69,7 @@ export class HypervisorDetailComponent implements OnInit {
   protected readonly onglet = signal<Onglet>('vms');
 
   ngOnInit(): void {
-    this.bridge.resolve('hypervisor', this.id()).subscribe({
+    this.resourceCache.resolve('hypervisor', this.id()).subscribe({
       next: (hypervisor) => this.hypervisor.set(hypervisor),
       error: (error: unknown) => {
         if (isAppError(error)) {
