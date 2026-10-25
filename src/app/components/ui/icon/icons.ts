@@ -41,6 +41,8 @@ export const ICONS = {
   key: ['M15 7a4 4 0 1 1-3.5 5.9L4 20.4V22h2v-2h2v-2h2l2.1-2.1A4 4 0 0 1 15 7z', 'M16 10h.01'],
   folder: ['M3 6h6l2 2.5h10V20H3z'],
   layers: ['M12 3 2 8l10 5 10-5z', 'M2 12.5l10 5 10-5', 'M2 17l10 5 10-5'],
+  // Un erlenmeyer : les labos.
+  flask: ['M9 3h6', 'M10 3v6L4.5 19A1.5 1.5 0 0 0 5.8 21h12.4a1.5 1.5 0 0 0 1.3-2L14 9V3', 'M7 15h10'],
 } as const;
 
 /** Le nom d'une icône : 'home', 'server', 'plus'... (TypeScript refuse un nom qui n'existe pas). */

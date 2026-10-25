@@ -1,0 +1,84 @@
+@if (lab(); as lab) {
+  <app-page
+    [backLink]="'/hypervisors/' + id()"
+    [backLabel]="hypervisor()?.name ?? 'Hyperviseur'"
+    eyebrow="Labo"
+    [title]="lab.name"
+    [subtitle]="lab.description || (lab.visibility === 'restricted' ? 'Accès restreint' : 'Ouvert à tous ceux qui ont l’accès à l’hyperviseur')"
+  >
+    <ng-container actions>
+      @if (limitReached(lab)) {
+        <app-button icon="play" [disabled]="true">Limite d'instances atteinte</app-button>
+      } @else if (lab.vms.length > 0) {
+        <app-button icon="play" (pressed)="deploy(lab)">Déployer</app-button>
+      }
+      @if (manages()) {
+        <app-button variant="ghost" icon="edit" (pressed)="edit(lab)">Modifier</app-button>
+      }
+      @if (auth.isAdmin()) {
+        <app-button variant="danger-ghost" icon="trash" (pressed)="remove(lab)">Supprimer</app-button>
+      }
+    </ng-container>
+
+    @if (error(); as error) {
+      <app-error-panel [error]="error" [retryable]="true" (retry)="load()" />
+    }
+
+    @if (lab.vms.length === 0) {
+      <app-callout type="tip" title="Ce labo est vide">
+        @if (manages()) {
+          Ajoutez des réseaux, puis des VM issues de templates (onglet « Définition ») : on pourra ensuite le déployer.
+        } @else {
+          Il n'a encore aucune VM : on ne peut pas le déployer pour l'instant.
+        }
+      </app-callout>
+    }
+
+    <app-grid [minItemWidth]="200">
+      <app-card>
+        <app-column [gap]="4">
+          <app-text variant="eyebrow">Machines virtuelles</app-text>
+          <app-text variant="title">{{ lab.vms.length }}{{ routers() ? ' dont ' + routers() + ' routeur(s)' : '' }}</app-text>
+        </app-column>
+      </app-card>
+      <app-card>
+        <app-column [gap]="4">
+          <app-text variant="eyebrow">Réseaux</app-text>
+          <app-text variant="title">{{ lab.networks.length }}</app-text>
+        </app-column>
+      </app-card>
+      <app-card>
+        <app-column [gap]="4">
+          <app-text variant="eyebrow">Vos instances</app-text>
+          <app-text variant="title">{{ lab.access.instance_count }}</app-text>
+        </app-column>
+      </app-card>
+      <app-card>
+        <app-column [gap]="4">
+          <app-text variant="eyebrow">Votre droit</app-text>
+          <app-text variant="title">{{ accessLabel(lab) }}</app-text>
+        </app-column>
+      </app-card>
+    </app-grid>
+
+    <app-tabs [tabs]="onglets()" [(active)]="onglet" />
+
+    @switch (onglet()) {
+      @case ('instances') {
+        <app-lab-instance-list [hypervisorId]="id()" [lab]="lab" />
+      }
+      @case ('definition') {
+        <app-lab-definition [hypervisorId]="id()" [lab]="lab" (changed)="load()" />
+      }
+      @case ('permissions') {
+        <app-lab-permission-list [hypervisorId]="id()" [labId]="lab.id" [visibility]="lab.visibility" />
+      }
+    }
+  </app-page>
+} @else if (error(); as error) {
+  <app-page [backLink]="'/hypervisors/' + id()" backLabel="Hyperviseur" title="Labo">
+    <app-error-panel [error]="error" [retryable]="true" (retry)="load()" />
+  </app-page>
+} @else {
+  <app-loading label="Chargement du labo…" />
+}

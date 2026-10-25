@@ -1,0 +1,53 @@
+<app-column [gap]="24">
+  <app-column [gap]="12">
+    <app-row [gap]="8">
+      <app-text variant="heading">Réseaux</app-text>
+      <app-spacer />
+      @if (manages()) {
+        <app-button size="sm" icon="plus" (pressed)="addNetwork()">Ajouter un réseau</app-button>
+      }
+    </app-row>
+    @if (lab().networks.length === 0) {
+      <app-empty-state
+        icon="network"
+        title="Aucun réseau"
+        message="Un réseau externe donne accès à Internet (un réseau existant de l'hyperviseur) ; un réseau interne est isolé et propre à chaque instance."
+      />
+    } @else {
+      <app-list>
+        @for (network of lab().networks; track network.id) {
+          <app-list-tile icon="network" [title]="network.name" [subtitle]="networkSubtitle(network)">
+            @if (manages()) {
+              <app-button variant="danger-ghost" size="sm" icon="trash" (pressed)="removeNetwork(network)">Retirer</app-button>
+            }
+          </app-list-tile>
+        }
+      </app-list>
+    }
+  </app-column>
+
+  <app-column [gap]="12">
+    <app-row [gap]="8">
+      <app-text variant="heading">Machines virtuelles</app-text>
+      <app-spacer />
+      @if (manages()) {
+        <app-button size="sm" icon="plus" (pressed)="editVm()">Ajouter une VM</app-button>
+      }
+    </app-row>
+    <app-text variant="small" color="muted">Les routeurs sont créés et démarrés avant les autres VM. Les instances déjà déployées ne changent pas quand on modifie le labo.</app-text>
+    @if (lab().vms.length === 0) {
+      <app-empty-state icon="cpu" title="Aucune VM" message="Ajoutez des VM issues de templates et branchez-les sur les réseaux du labo." />
+    } @else {
+      <app-list>
+        @for (vm of lab().vms; track vm.id) {
+          <app-list-tile [icon]="vm.role === 'router' ? 'network' : 'cpu'" [title]="vm.name" [subtitle]="vmSubtitle(vm) + ' · ' + vmNics(vm)">
+            @if (manages()) {
+              <app-button variant="ghost" size="sm" icon="edit" (pressed)="editVm(vm)">Modifier</app-button>
+              <app-button variant="danger-ghost" size="sm" icon="trash" (pressed)="removeVm(vm)">Retirer</app-button>
+            }
+          </app-list-tile>
+        }
+      </app-list>
+    }
+  </app-column>
+</app-column>

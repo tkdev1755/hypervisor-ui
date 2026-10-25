@@ -12,6 +12,9 @@
       @case ('templates') {
         <app-template-list [hypervisorId]="hypervisor.id" [hypervisorName]="hypervisor.name" />
       }
+      @case ('labs') {
+        <app-lab-list [hypervisorId]="hypervisor.id" [hypervisorName]="hypervisor.name" />
+      }
       @case ('disks') {
         <app-disk-list [hypervisorId]="hypervisor.id" />
       }

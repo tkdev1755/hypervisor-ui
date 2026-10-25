@@ -1,0 +1,13 @@
+@if (loading()) {
+  <app-loading label="Chargement de vos instances…" />
+} @else if (error(); as error) {
+  <app-error-panel [error]="error" [retryable]="true" (retry)="load()" />
+} @else if (list().length === 0) {
+  <app-empty-state icon="flask" title="Aucune instance" message="Vous n'avez déployé aucun labo. Les labos se trouvent dans l'onglet « Labos » de chaque hyperviseur." />
+} @else {
+  <app-list>
+    @for (instance of list(); track instance.id) {
+      <app-list-tile icon="flask" [title]="instance.name" [subtitle]="subtitle(instance)" [status]="instance.status" [clickable]="true" (tap)="open(instance)" />
+    }
+  </app-list>
+}

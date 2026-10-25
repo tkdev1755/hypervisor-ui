@@ -150,7 +150,29 @@ Alignement sur `src/groups.rs` de l'API (migration `0005_user_groups`).
 - [x] Utilisateur : section « Mes groupes » de « Mon compte » (`user-group-list`), direct ou par un groupe imbriqué.
 - [x] Erreurs : nom pris, cycle, groupe dans lui-même, nom / description invalides (`GROUP_MESSAGES`).
 - [x] Fausse API : groupes d'exemple (`etudiants` ⊃ `promo-2026`), cycles refusés, suppression en cascade.
-- [ ] Les groupes ne donnent encore aucun droit côté API : rien à afficher ailleurs pour l'instant.
+- [x] Les groupes servent aux droits sur les templates et les labos (onglets « Droits »).
+
+### Labos (25 octobre 2026)
+
+Alignement sur `src/labs.rs` de l'API (migration `0002_labs`) : un labo = des réseaux (externes : un réseau
+libvirt existant ; internes : isolés, créés par instance) et des VM issues de templates (routeurs d'abord,
+cartes réseau dans l'ordre), déployé en **instances** qui appartiennent à celui qui déploie.
+
+- [x] Modèles (`models/lab.model.ts`) et `LabService` (définition, droits, instances, `GET /api/me/lab-instances`).
+- [x] Onglet « Labos » de l'hyperviseur (`lab-list`) : Déployer (limite d'instances), Créer un labo (admin).
+- [x] Page d'un labo (`lab-detail`, sans garde, lit `access`) : onglets Instances (`lab-instance-list`),
+      Définition (`lab-definition` : réseaux et VM, modifiables par un gestionnaire) et Droits (admin,
+      `lab-permission-list` / `lab-permission-modal`, comme les templates mais en `max_instances`).
+- [x] Modales : `lab-form-modal`, `lab-network-modal` (réseaux libvirt de `vm-options`, saisie libre en 403),
+      `lab-vm-modal` (template, version, ressources, cartes réseau ordonnées), `lab-instance-modal` (déployer).
+- [x] Page d'une instance (`lab-instance-detail`) : suivi du déploiement (3 s), raison d'un échec, Démarrer /
+      Arrêter / Forcer / Supprimer, chaque VM ouvre sa page.
+- [x] « Mes instances de labos » dans Mon compte (`my-lab-instance-list`).
+- [x] Erreurs : `LAB_MESSAGES` (409 / 400 / 404 des labos), « Lab limit reached » → `QUOTA_EXCEEDED`, hyperviseur
+      et template impossibles à supprimer (instances, labo qui utilise le template).
+- [x] Fausse API : labo `tp-opnsense` (groupe `etudiants`, 1 instance chacun) et labo vide, déploiement en 4 s,
+      échec simulé (nom contenant « fail »).
+- [ ] Limite connue de l'API : comme pour les templates, un droit sur un labo ne rend pas l'hyperviseur visible.
 
 ### Documentation
 
@@ -282,3 +304,4 @@ un 409 affiche un message métier clair.
 | 25 octobre 2026 | Templates : activation / désactivation (`allow_vm_creation`), masqués aux utilisateurs quand désactivés. |
 | 25 octobre 2026 | Groupes d'utilisateurs : administration (groupes imbriqués), « Mes groupes » dans Mon compte. |
 | 25 octobre 2026 | Droits sur les templates : utilisateurs et groupes, rôles « utiliser » / « gérer », limite de VM. |
+| 25 octobre 2026 | Labos : définition (réseaux, VM, routeurs), droits, instances (déployer, démarrer, arrêter, supprimer), Mes instances. |

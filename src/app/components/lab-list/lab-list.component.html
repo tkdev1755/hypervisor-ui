@@ -1,0 +1,41 @@
+<app-column [gap]="16">
+  <app-row [gap]="8">
+    <app-text color="muted">Des ensembles de VM et de réseaux, à déployer en instances</app-text>
+    <app-spacer />
+    <app-button variant="ghost" size="sm" icon="refresh" [disabled]="loading()" (pressed)="load()">Actualiser</app-button>
+    @if (auth.isAdmin()) {
+      <app-button size="sm" icon="plus" (pressed)="create()">Créer un labo</app-button>
+    }
+  </app-row>
+
+  @if (loading()) {
+    <app-loading label="Chargement des labos…" />
+  } @else if (error(); as error) {
+    <app-error-panel [error]="error" [retryable]="true" (retry)="load()" />
+  } @else if (empty()) {
+    @if (auth.isAdmin()) {
+      <app-empty-state icon="flask" title="Aucun labo" message="Un labo réunit plusieurs VM (issues de templates) et leurs réseaux : chacun peut ensuite en déployer sa copie.">
+        <app-button icon="plus" (pressed)="create()">Créer un labo</app-button>
+      </app-empty-state>
+    } @else {
+      <app-empty-state
+        icon="flask"
+        title="Aucun labo"
+        message="Aucun labo ne vous est ouvert sur cet hyperviseur. Un administrateur peut vous en donner le droit, à vous ou à l'un de vos groupes."
+      />
+    }
+  } @else {
+    <app-grid [minItemWidth]="260">
+      @for (lab of list(); track lab.id) {
+        <app-resource-card icon="flask" [title]="lab.name" [subtitle]="subtitle(lab)" [meta]="meta(lab)" [clickable]="true" (tap)="open(lab)">
+          @if (limitReached(lab)) {
+            <app-button size="sm" icon="plus" [disabled]="true">Limite atteinte</app-button>
+          } @else {
+            <app-button size="sm" icon="play" (pressed)="deploy(lab)">Déployer</app-button>
+          }
+          <app-button variant="ghost" size="sm" icon="list" (pressed)="open(lab)">Ouvrir</app-button>
+        </app-resource-card>
+      }
+    </app-grid>
+  }
+</app-column>

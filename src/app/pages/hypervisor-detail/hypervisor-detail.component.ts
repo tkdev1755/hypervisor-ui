@@ -2,6 +2,7 @@ import { Component, OnInit, computed, inject, input, signal } from '@angular/cor
 
 import { HypervisorAccessListComponent } from '@app/components/hypervisor-access-list/hypervisor-access-list.component';
 import { DiskListComponent } from '@app/components/disk-list/disk-list.component';
+import { LabListComponent } from '@app/components/lab-list/lab-list.component';
 import { PageComponent } from '@app/components/layout/page/page.component';
 import { NetworkListComponent } from '@app/components/network-list/network-list.component';
 import { ErrorPanelComponent } from '@app/components/ui/error-panel/error-panel.component';
@@ -15,7 +16,7 @@ import { Hypervisor } from '@app/models/hypervisor.model';
 import { AuthService } from '@app/services/auth.service';
 import { ContextBridgeService } from '@app/services/context-bridge.service';
 
-type Onglet = 'vms' | 'templates' | 'disks' | 'networks' | 'access';
+type Onglet = 'vms' | 'templates' | 'labs' | 'disks' | 'networks' | 'access';
 
 /**
  * Le détail d'un hyperviseur, avec ses onglets.
@@ -35,6 +36,7 @@ type Onglet = 'vms' | 'templates' | 'disks' | 'networks' | 'access';
     ErrorPanelComponent,
     VmListComponent,
     TemplateListComponent,
+    LabListComponent,
     DiskListComponent,
     NetworkListComponent,
     HypervisorAccessListComponent,
@@ -52,12 +54,13 @@ export class HypervisorDetailComponent implements OnInit {
   protected readonly error = signal<AppError | null>(null);
 
   /**
-   * Un utilisateur voit ses VM et les templates prêts (s'il a l'accès à l'hyperviseur) ;
+   * Un utilisateur voit ses VM, les templates et les labos sur lesquels il a un droit ;
    * disques, réseaux et accès sont réservés aux administrateurs (403 sinon).
    */
   private readonly tousLesOnglets: (Tab<Onglet> & { adminOnly?: boolean })[] = [
     { id: 'vms', label: 'Machines virtuelles', icon: 'cpu' },
     { id: 'templates', label: 'Templates', icon: 'layers' },
+    { id: 'labs', label: 'Labos', icon: 'flask' },
     { id: 'disks', label: 'Disques', icon: 'disk', adminOnly: true },
     { id: 'networks', label: 'Réseaux', icon: 'network', adminOnly: true },
     { id: 'access', label: 'Accès', icon: 'shield', adminOnly: true },

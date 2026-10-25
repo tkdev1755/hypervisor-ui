@@ -22,6 +22,10 @@ const STATUSES: Record<string, { label: string; tone: Tone }> = {
   failed: { label: 'Échec', tone: 'danger' },
   cancelled: { label: 'Annulé', tone: 'neutral' },
   disabled: { label: 'Désactivé', tone: 'neutral' },
+  // Instances de labos (« failed » est déjà plus haut) ; « missing » : une VM d'instance disparue de l'hyperviseur.
+  deploying: { label: 'Déploiement', tone: 'warning' },
+  ready: { label: 'Prête', tone: 'success' },
+  missing: { label: 'Disparue', tone: 'danger' },
 };
 
 /**

@@ -1,0 +1,34 @@
+<app-column [gap]="16">
+  <app-row [gap]="8">
+    <app-text color="muted">{{ manages() ? 'Toutes les instances de ce labo' : 'Vos instances de ce labo' }}</app-text>
+    <app-spacer />
+    <app-button variant="ghost" size="sm" icon="refresh" [disabled]="loading()" (pressed)="load()">Actualiser</app-button>
+  </app-row>
+
+  @if (loading()) {
+    <app-loading label="Chargement des instances…" />
+  } @else if (error(); as error) {
+    <app-error-panel [error]="error" [retryable]="true" (retry)="load()" />
+  } @else if (list().length === 0) {
+    <app-empty-state icon="flask" title="Aucune instance" message="« Déployer » crée votre copie du labo : ses réseaux internes et ses VM." />
+  } @else {
+    <app-list>
+      @for (instance of list(); track instance.id) {
+        <app-list-tile icon="flask" [title]="instance.name" [subtitle]="subtitle(instance)" [status]="instance.status" [clickable]="true" (tap)="open(instance)">
+          @if (instance.status === 'ready') {
+            <app-button variant="ghost" size="sm" icon="play" [loading]="busyId() === instance.id" (pressed)="power(instance, true)">Démarrer</app-button>
+            <app-button variant="ghost" size="sm" icon="stop" [loading]="busyId() === instance.id" (pressed)="power(instance, false)">Arrêter</app-button>
+          }
+          <app-button variant="ghost" size="sm" icon="list" (pressed)="open(instance)">Ouvrir</app-button>
+          @if (instance.status !== 'deploying') {
+            <app-button variant="danger-ghost" size="sm" icon="trash" (pressed)="remove(instance)">Supprimer</app-button>
+          }
+        </app-list-tile>
+      }
+    </app-list>
+  }
+
+  @if (actionError(); as actionError) {
+    <app-error-panel [error]="actionError" />
+  }
+</app-column>

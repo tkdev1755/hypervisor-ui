@@ -1,0 +1,88 @@
+<app-modal-shell
+  [title]="editing() ? 'Modifier la VM « ' + vm()?.name + ' »' : 'Ajouter une VM au labo'"
+  [subtitle]="lab().name"
+  [state]="state()"
+  [error]="error()"
+  loadingLabel="Chargement…"
+  [successMessage]="editing() ? 'VM enregistrée. Les instances déjà déployées ne changent pas.' : 'VM ajoutée au labo.'"
+  (retry)="retry()"
+  (done)="modalRef.close(result() ?? undefined)"
+>
+  <app-column [gap]="16">
+    <app-text-field label="Nom de la VM" placeholder="opnsense" [(value)]="name" [error]="nameError()" hint="Chaque instance y ajoute un suffixe : deux instances du labo ne se gênent pas." />
+
+    <app-column [gap]="6">
+      <app-text variant="small" weight="medium">Rôle</app-text>
+      <app-choice-cards label="Rôle" [columns]="2" [options]="roleChoices" [(value)]="role" />
+    </app-column>
+
+    <app-column [gap]="6">
+      <app-text variant="small" weight="medium">Template</app-text>
+      @if (templateChoices().length === 0) {
+        <app-text variant="small" color="muted">Aucun template que vous pouvez utiliser sur cet hyperviseur : créez-en un, ou demandez un droit.</app-text>
+      } @else {
+        <app-choice-cards label="Template" [columns]="2" [options]="templateChoices()" [(value)]="templateId" />
+      }
+      @if (templateError(); as message) {
+        <app-text variant="small" color="danger">{{ message }}</app-text>
+      }
+    </app-column>
+
+    @if (templateId()) {
+      <app-column [gap]="6">
+        <app-text variant="small" weight="medium">Version du template</app-text>
+        <app-choice-cards label="Version" [columns]="3" [options]="versionChoices()" [(value)]="version" />
+      </app-column>
+    }
+
+    <app-row [gap]="16" crossAlign="start" [wrap]="true">
+      <app-number-field label="vCPU" [(value)]="vcpus" [min]="vcpuLimits.min" [max]="vcpuLimits.max" />
+      <app-number-field label="Mémoire" unit="Mo" [(value)]="memoryMb" [min]="memoryLimits.min" [max]="memoryLimits.max" [step]="512" />
+    </app-row>
+    @if (resourcesError(); as message) {
+      <app-text variant="small" color="danger">{{ message }}</app-text>
+    }
+
+    <app-column [gap]="6">
+      <app-text variant="small" weight="medium">Firmware</app-text>
+      <app-text variant="small" color="muted">Celui avec lequel le template a été installé.</app-text>
+      <app-choice-cards label="Firmware" [columns]="2" [options]="firmwareChoices" [(value)]="firmware" />
+    </app-column>
+
+    <app-column [gap]="8">
+      <app-text variant="small" weight="medium">Cartes réseau, dans l'ordre</app-text>
+      <app-text variant="small" color="muted">La carte 1 est la première vue par la VM : pour un OPNsense, mettez le WAN d'abord, puis le LAN.</app-text>
+
+      @if (nicRows().length === 0) {
+        <app-text variant="small" color="muted">Aucune carte : la VM ne sera branchée sur aucun réseau.</app-text>
+      } @else {
+        <app-list>
+          @for (row of nicRows(); track $index) {
+            <app-list-tile icon="network" [title]="'Carte ' + (row.index + 1) + ' · ' + (row.network?.name ?? '?')" [subtitle]="describeNetwork(row.network)">
+              @if (row.index > 0) {
+                <app-button variant="ghost" size="sm" (pressed)="moveUp(row.index)">Monter</app-button>
+              }
+              <app-button variant="danger-ghost" size="sm" icon="trash" (pressed)="removeNic(row.index)">Retirer</app-button>
+            </app-list-tile>
+          }
+        </app-list>
+      }
+
+      @if (lab().networks.length === 0) {
+        <app-callout type="tip" title="Aucun réseau dans le labo">Ajoutez d'abord des réseaux au labo (onglet « Définition »), puis branchez-les ici.</app-callout>
+      } @else if (nics().length < maxNics) {
+        <app-row [gap]="8" [wrap]="true">
+          <app-text variant="small" color="muted">Ajouter une carte sur :</app-text>
+          @for (network of lab().networks; track network.id) {
+            <app-button variant="ghost" size="sm" icon="plus" (pressed)="addNic(network)">{{ network.name }}</app-button>
+          }
+        </app-row>
+      }
+    </app-column>
+  </app-column>
+
+  <app-row footer [gap]="8">
+    <app-button variant="ghost" (pressed)="modalRef.close()">Annuler</app-button>
+    <app-button (pressed)="submit()">{{ editing() ? 'Enregistrer' : 'Ajouter' }}</app-button>
+  </app-row>
+</app-modal-shell>

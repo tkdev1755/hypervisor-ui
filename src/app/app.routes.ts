@@ -57,6 +57,19 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/template-detail/template-detail.component').then((m) => m.TemplateDetailComponent),
       },
       {
+        // La page d'un labo et celle d'une de ses instances : pas de garde, pour les mêmes raisons que les templates
+        // (le droit dépend du labo, ou du propriétaire de l'instance).
+        path: 'hypervisors/:id/labs/:labId',
+        title: 'Labo · Hypervisor',
+        loadComponent: () => import('./pages/lab-detail/lab-detail.component').then((m) => m.LabDetailComponent),
+      },
+      {
+        path: 'hypervisors/:id/labs/:labId/instances/:instanceId',
+        title: 'Instance de labo · Hypervisor',
+        loadComponent: () =>
+          import('./pages/lab-instance-detail/lab-instance-detail.component').then((m) => m.LabInstanceDetailComponent),
+      },
+      {
         path: 'account',
         title: 'Mon compte · Hypervisor',
         loadComponent: () => import('./pages/account/account.component').then((m) => m.AccountComponent),

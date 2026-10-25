@@ -1,0 +1,35 @@
+<app-modal-shell
+  [title]="'Déployer « ' + lab().name + ' »'"
+  [state]="state()"
+  [error]="error()"
+  loadingLabel="Lancement du déploiement…"
+  successMessage="Déploiement lancé : les réseaux puis les VM sont en cours de création. La page de l'instance suit leur avancement."
+  (retry)="state.set('form')"
+  (done)="modalRef.close(result() ?? undefined)"
+>
+  <app-column [gap]="16">
+    <app-callout title="Votre copie du labo">
+      L'instance reçoit ses propres réseaux internes et ses propres VM. Elles vous appartiennent et comptent dans votre quota.
+      La copie des disques peut prendre quelques minutes.
+    </app-callout>
+
+    @if (labLimit()) {
+      <app-text variant="small" color="muted">{{ labLimit() }}</app-text>
+    }
+    @if (quotaSummary()) {
+      <app-text variant="small" color="muted">Votre quota : {{ quotaSummary() }}</app-text>
+    }
+
+    <app-text-field label="Nom de l'instance (facultatif)" [placeholder]="lab().name" [(value)]="name" [error]="nameError()" hint="Vide : le nom du labo." />
+
+    <app-column [gap]="6">
+      <app-text variant="small" weight="medium">Démarrer les VM à la fin</app-text>
+      <app-choice-cards label="Démarrer les VM" [columns]="2" [options]="startChoices" [(value)]="start" />
+    </app-column>
+  </app-column>
+
+  <app-row footer [gap]="8">
+    <app-button variant="ghost" (pressed)="modalRef.close()">Annuler</app-button>
+    <app-button icon="play" (pressed)="submit()">Déployer</app-button>
+  </app-row>
+</app-modal-shell>

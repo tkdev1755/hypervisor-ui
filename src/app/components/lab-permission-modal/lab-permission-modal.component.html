@@ -1,0 +1,60 @@
+<app-modal-shell
+  [title]="editing() ? 'Droit de ' + permission()?.name : 'Donner un droit sur le labo'"
+  [state]="state()"
+  [error]="error()"
+  loadingLabel="Enregistrement…"
+  successMessage="Droit enregistré."
+  (retry)="state.set('form')"
+  (done)="modalRef.close(true)"
+>
+  <app-column [gap]="16">
+    @if (!editing()) {
+      <app-column [gap]="6">
+        <app-text variant="small" weight="medium">Pour qui</app-text>
+        <app-choice-cards label="Pour qui" [columns]="2" [options]="kindChoices" [(value)]="kind" />
+      </app-column>
+
+      @if (kind() === 'user') {
+        <app-user-picker label="Utilisateur" [includeAdmins]="false" [exclude]="existingUserIds()" [(value)]="userId" />
+      } @else {
+        <app-column [gap]="6">
+          <app-text variant="small" weight="medium">Groupe</app-text>
+          @if (groupChoices().length === 0) {
+            <app-text variant="small" color="muted">Aucun groupe à proposer : créez-en depuis la page Groupes.</app-text>
+          } @else {
+            <app-choice-cards label="Groupe" [columns]="2" [options]="groupChoices()" [(value)]="groupId" />
+          }
+        </app-column>
+      }
+      @if (targetError(); as message) {
+        <app-text variant="small" color="danger">{{ message }}</app-text>
+      }
+    }
+
+    <app-column [gap]="6">
+      <app-text variant="small" weight="medium">Rôle</app-text>
+      <app-choice-cards label="Rôle" [columns]="2" [options]="roleChoices" [(value)]="role" />
+    </app-column>
+
+    @if (role() === 'manage') {
+      <app-callout type="warning" title="Gérer, c'est piloter les instances des autres">
+        Un gestionnaire modifie le labo (avec les templates qu'il a le droit d'utiliser), et voit, démarre, arrête et supprime toutes ses
+        instances, y compris celles des autres utilisateurs.
+      </app-callout>
+    }
+
+    <app-text-field
+      label="Limite d'instances (facultative)"
+      type="number"
+      placeholder="Sans limite"
+      [(value)]="maxInstances"
+      [error]="maxInstancesError()"
+      hint="Combien d'instances de ce labo chaque utilisateur concerné peut posséder. Vide : sans limite."
+    />
+  </app-column>
+
+  <app-row footer [gap]="8">
+    <app-button variant="ghost" (pressed)="modalRef.close()">Annuler</app-button>
+    <app-button (pressed)="submit()">Enregistrer</app-button>
+  </app-row>
+</app-modal-shell>

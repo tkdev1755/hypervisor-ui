@@ -1,0 +1,37 @@
+<app-modal-shell
+  [title]="editing() ? 'Modifier « ' + lab()?.name + ' »' : 'Créer un labo'"
+  [subtitle]="hypervisorName() ? 'Sur ' + hypervisorName() : ''"
+  [state]="state()"
+  [error]="error()"
+  loadingLabel="Enregistrement…"
+  [successMessage]="editing() ? 'Modifications enregistrées.' : 'Labo créé. Ajoutez-lui maintenant des réseaux et des VM (onglet « Définition »).'"
+  (retry)="state.set('form')"
+  (done)="modalRef.close(result() ?? undefined)"
+>
+  <app-column [gap]="16">
+    <app-text-field label="Nom du labo" placeholder="tp-reseau-1" [(value)]="name" [error]="nameError()" />
+
+    <app-text-field
+      label="Description (facultative)"
+      placeholder="Un OPNsense entre Internet et deux réseaux internes…"
+      [rows]="3"
+      [(value)]="description"
+      [error]="descriptionError()"
+    />
+
+    @if (auth.isAdmin()) {
+      <app-column [gap]="6">
+        <app-text variant="small" weight="medium">Qui peut le déployer</app-text>
+        <app-text variant="small" color="muted">
+          En plus des utilisateurs et groupes qui ont un droit (onglet « Droits » de la page du labo). Les administrateurs le peuvent toujours.
+        </app-text>
+        <app-choice-cards label="Qui peut le déployer" [columns]="2" [options]="visibilityChoices" [(value)]="visibility" />
+      </app-column>
+    }
+  </app-column>
+
+  <app-row footer [gap]="8">
+    <app-button variant="ghost" (pressed)="modalRef.close()">Annuler</app-button>
+    <app-button (pressed)="submit()">{{ editing() ? 'Enregistrer' : 'Créer' }}</app-button>
+  </app-row>
+</app-modal-shell>

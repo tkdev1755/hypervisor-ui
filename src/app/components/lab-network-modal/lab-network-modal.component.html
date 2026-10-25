@@ -1,0 +1,44 @@
+<app-modal-shell
+  title="Ajouter un réseau au labo"
+  [state]="state()"
+  [error]="error()"
+  loadingLabel="Chargement…"
+  successMessage="Réseau ajouté. Branchez-le maintenant sur des VM du labo."
+  (retry)="state.set('form')"
+  (done)="modalRef.close(result() ?? undefined)"
+>
+  <app-column [gap]="16">
+    <app-text-field label="Nom du réseau" placeholder="lan1" [monospace]="true" [(value)]="name" [error]="nameError()" hint="Par exemple wan, lan1, dmz." />
+
+    <app-column [gap]="6">
+      <app-text variant="small" weight="medium">Type</app-text>
+      <app-choice-cards label="Type" [columns]="2" [options]="kindChoices" [(value)]="kind" />
+    </app-column>
+
+    @if (kind() === 'external') {
+      @if (libvirtNetworks(); as choices) {
+        <app-column [gap]="6">
+          <app-text variant="small" weight="medium">Réseau de l'hyperviseur</app-text>
+          <app-text variant="small" color="muted">Partagé par toutes les instances : c'est par lui que les VM sortent sur Internet.</app-text>
+          <app-choice-cards label="Réseau de l'hyperviseur" [columns]="2" [options]="choices" [(value)]="libvirtChoice" />
+        </app-column>
+      } @else {
+        <app-text-field
+          label="Réseau de l'hyperviseur"
+          placeholder="default"
+          [monospace]="true"
+          [(value)]="libvirtTyped"
+          hint="Le nom d'un réseau libvirt qui existe déjà sur l'hyperviseur (la liste n'a pas pu être chargée)."
+        />
+      }
+      @if (libvirtError(); as message) {
+        <app-text variant="small" color="danger">{{ message }}</app-text>
+      }
+    }
+  </app-column>
+
+  <app-row footer [gap]="8">
+    <app-button variant="ghost" (pressed)="modalRef.close()">Annuler</app-button>
+    <app-button (pressed)="submit()">Ajouter</app-button>
+  </app-row>
+</app-modal-shell>

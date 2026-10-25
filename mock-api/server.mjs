@@ -16,6 +16,10 @@
 //   le GÈRE. bob n'a pas l'accès à kvm-local (il le voit parce qu'il y possède bob-vm) : il ne voit
 //   donc que ubuntu-24, qu'il gère (page du template, journal, reconstruction…).
 //
+// LABOS (mode full, comme labs.rs) : « tp-opnsense » (un routeur sur wan + lan1, un client sur lan1) est ouvert au
+//   groupe « etudiants » (alice, et bob par promo-2026), 1 instance chacun ; « brouillon » est vide (admins seulement).
+//   Un déploiement dure 4 s ; un nom d'instance qui contient « fail » rate (pour voir l'affichage de l'erreur).
+//
 // Mêmes routes, même port (3000) et même format d'erreur { status, content }
 // que l'API Rust. Les données sont en mémoire : elles disparaissent à l'arrêt.
 // Aucune dépendance : seulement le module http de Node.
@@ -63,6 +67,8 @@ const refreshTokens = new Map(); // refresh token -> { userId, expires }
 const failures = new Map(); // nom d'utilisateur -> nombre d'échecs
 const settings = { registration_open: false };
 const audit = []; // le plus récent en premier
+const labs = new Map(); // hypervisorId -> Lab[] ; chaque labo garde networks[], vms[] et permissions[]
+const labInstances = []; // toutes les instances, avec networks[] et vms[] (vm_id -> la VM dans `vms`)
 const groups = new Map(); // groupId -> { id, name, description, created_at, updated_at, members: Map(userId -> date), subgroups: Map(childId -> date) }
 
 const NO_QUOTA = () => ({ max_vms: null, max_vcpus: null, max_memory_mb: null, max_disk_gb: null });
@@ -86,6 +92,7 @@ function addHypervisor(name, uri) {
     { id: 'n2', hypervisor_id: hypervisor.id, name: 'isolated', bridge: null, status: 'inactive' },
   ]);
   templates.set(hypervisor.id, []);
+  labs.set(hypervisor.id, []);
   disks.set(hypervisor.id, [
     { id: 'd1', hypervisor_id: hypervisor.id, name: 'web-01.qcow2', size_gb: 20, format: 'qcow2' },
     { id: 'd2', hypervisor_id: hypervisor.id, name: 'db-01.raw', size_gb: 100, format: 'raw' },
@@ -139,6 +146,29 @@ ubuntu.permissions.push(
   { kind: 'user', id: alice.id, role: 'use', max_vms: 1, created_at: now(), updated_at: now() },
   { kind: 'group', id: promo.id, role: 'manage', max_vms: null, created_at: now(), updated_at: now() },
 );
+{
+  const debian = templates.get(local.id).find((t) => t.name === 'debian-12');
+  const lab = {
+    id: randomUUID(), hypervisor_id: local.id, name: 'tp-opnsense', description: 'Un routeur entre Internet et un réseau interne, avec un client.',
+    visibility: 'restricted', created_at: now() - 3600, updated_at: now() - 3600, permissions: [],
+    networks: [
+      { id: randomUUID(), name: 'wan', kind: 'external', libvirt_network: 'default' },
+      { id: randomUUID(), name: 'lan1', kind: 'internal', libvirt_network: null },
+    ],
+    vms: [],
+  };
+  lab.vms.push(
+    { id: randomUUID(), name: 'opnsense', role: 'router', template_id: debian.id, version: null, memory_mb: 2048, vcpus: 2, firmware: 'bios', networks: [lab.networks[0].id, lab.networks[1].id] },
+    { id: randomUUID(), name: 'client', role: 'vm', template_id: debian.id, version: 1, memory_mb: 1024, vcpus: 1, firmware: 'bios', networks: [lab.networks[1].id] },
+  );
+  lab.permissions.push({ kind: 'group', id: etudiants.id, role: 'use', max_instances: 1, created_at: now(), updated_at: now() });
+  labs.get(local.id).push(lab);
+  // Un labo vide, réservé aux admins : pour voir l'écran « labo vide ».
+  labs.get(local.id).push({
+    id: randomUUID(), hypervisor_id: local.id, name: 'brouillon', description: '', visibility: 'restricted',
+    created_at: now(), updated_at: now(), permissions: [], networks: [], vms: [],
+  });
+}
 bobVm.shares.push({ user_id: alice.id, username: 'alice', created_at: now(), expires_at: null });
 
 // --- Réponses ---------------------------------------------------------------
@@ -230,7 +260,7 @@ function hypervisorView(hypervisor, user) {
 function quotaViolation(owner, extra) {
   const usage = userView(owner).usage;
   const checks = [
-    ['max_vms', usage.vms + 1], ['max_vcpus', usage.vcpus + extra.vcpus],
+    ['max_vms', usage.vms + (extra.vms ?? 1)], ['max_vcpus', usage.vcpus + extra.vcpus],
     ['max_memory_mb', usage.memory_mb + extra.memory_mb], ['max_disk_gb', usage.disk_gb + extra.disk_gb],
   ];
   for (const [field, requested] of checks) {
@@ -288,6 +318,13 @@ const server = createServer(async (req, res) => {
     }
   }
 
+  // GET /api/me/lab-instances : toutes mes instances de labos.
+  if (parts[1] === 'me' && parts[2] === 'lab-instances' && method === 'GET') {
+    return send(res, 200, labInstances.filter((i) => i.owner_id === user.id).map((i) => {
+      const lab = labOf(i);
+      return { id: i.id, name: i.name, status: i.status, lab_id: lab.id, lab_name: lab.name, hypervisor_id: lab.hypervisor_id, created_at: i.created_at };
+    }));
+  }
   // GET /api/me/groups : chacun voit ses groupes (lecture seule).
   if (parts[1] === 'me' && parts[2] === 'groups' && method === 'GET') return send(res, 200, groupsOf(user.id));
   if (parts[1] === 'groups') {
@@ -616,6 +653,8 @@ async function handleHypervisors(req, res, parts, method, url, user, { forbidden
       return send(res, 200, hypervisor);
     }
     if (method === 'DELETE') {
+      const deployed = labInstances.filter((i) => labOf(i).hypervisor_id === id).length;
+      if (deployed) return err(res, 409, `${deployed} lab instance(s) are deployed on this hypervisor: delete them first`);
       hypervisors.delete(id);
       return send(res, 204);
     }
@@ -650,6 +689,12 @@ async function handleHypervisors(req, res, parts, method, url, user, { forbidden
   if (resource === 'templates') {
     if (!FULL) return notImplemented(res, `${resource} ${method}`);
     return handleTemplates(req, res, { id, subId, action, extra, method, url, user, forbidden });
+  }
+
+  // Labos : comme les templates, les droits sont donnés labo par labo.
+  if (resource === 'labs') {
+    if (!FULL) return notImplemented(res, `${resource} ${method}`);
+    return handleLabs(req, res, { id, subId, action, extra, method, url, user, forbidden });
   }
 
   // Disques, pools, réseaux (déjà réservés aux admins plus haut).
@@ -957,6 +1002,8 @@ async function handleTemplates(req, res, { id, subId, action, extra, method, url
     if (method === 'DELETE') {
       if (!admin) return forbidden();
       if (runningBuild(template)) return err(res, 409, 'The template is being built: stop the build first');
+      const usedBy = (labs.get(id) ?? []).find((lab) => lab.vms.some((vm) => vm.template_id === template.id));
+      if (usedBy) return err(res, 409, `The template is used by the lab ${usedBy.name}: remove it from the lab first`);
       templates.set(id, list.filter((t) => t.id !== template.id));
       logAudit(user, 'template.delete', `${id}/${template.id}`, template.name);
       return send(res, 204);
@@ -1086,6 +1133,321 @@ async function handleTemplates(req, res, { id, subId, action, extra, method, url
     res.setHeader('Location', `/api/jobs/${job.id}`);
     const { owner_id, ...shown } = job;
     return send(res, 202, shown);
+  }
+  return err(res, 404, 'Route not found');
+}
+
+// --- Labos (comme labs.rs) -----------------------------------------------------
+const LAB_NETWORK_NAME = /^[a-zA-Z0-9_-]{1,32}$/;
+const LAB_VM_NAME = /^[a-zA-Z0-9_-][a-zA-Z0-9._-]{0,54}$/;
+const labOf = (instance) => [...labs.values()].flat().find((lab) => lab.id === instance.lab_id);
+const instancesOf = (lab, userId) => labInstances.filter((i) => i.lab_id === lab.id && (!userId || i.owner_id === userId));
+
+/** Les droits sur un labo (comme Caller::rights) : null s'il ne le voit pas ; le plus généreux l'emporte. */
+function labRights(lab, user) {
+  if (isAdmin(user)) return { level: 'admin', max_instances: null };
+  const myGroups = new Set(groupsOf(user.id).map((group) => group.id));
+  let rights = null;
+  const add = (level, max) => {
+    if (!rights) return (rights = { level, max_instances: max });
+    const best = LEVELS.indexOf(level) > LEVELS.indexOf(rights.level) ? level : rights.level;
+    const limit = rights.max_instances === null || max === null ? null : Math.max(rights.max_instances, max);
+    rights = { level: best, max_instances: limit };
+  };
+  for (const p of lab.permissions) {
+    if ((p.kind === 'user' && p.id === user.id) || (p.kind === 'group' && myGroups.has(p.id))) add(p.role, p.max_instances);
+  }
+  if (lab.visibility === 'hypervisor' && canCreateVm(lab.hypervisor_id, user)) add('use', null);
+  return rights;
+}
+
+function labView(lab, user, rights) {
+  const { networks, vms: labVms, permissions, ...rest } = lab;
+  return { ...rest, access: { ...rights, instance_count: instancesOf(lab, user.id).length } };
+}
+function labDetailView(lab, user, rights) {
+  const templateName = (id) => (templates.get(lab.hypervisor_id) ?? []).find((t) => t.id === id)?.name ?? '?';
+  const ordered = [...lab.vms].sort((a, b) => (b.role === 'router') - (a.role === 'router') || a.name.localeCompare(b.name));
+  return { ...labView(lab, user, rights), networks: lab.networks, vms: ordered.map((vm) => ({ ...vm, template_name: templateName(vm.template_id) })) };
+}
+/** L'instance avec l'état en direct de ses VM (une VM supprimée par les routes des VM sort de la liste, comme en base). */
+function instanceView(instance) {
+  const lab = labOf(instance);
+  const all = vms.get(lab.hypervisor_id) ?? [];
+  const shown = instance.vms.filter((v) => all.some((vm) => vm.id === v.vm_id) || v.missing);
+  return {
+    id: instance.id, lab_id: lab.id, lab_name: lab.name, hypervisor_id: lab.hypervisor_id, owner_id: instance.owner_id,
+    owner: users.get(instance.owner_id)?.username, name: instance.name, status: instance.status, error: instance.error,
+    created_at: instance.created_at, networks: instance.networks,
+    vms: shown.map(({ missing, ...v }) => ({ ...v, status: all.find((vm) => vm.id === v.vm_id)?.status ?? 'missing' })),
+  };
+}
+
+/** Vérifie le corps d'une VM de labo ; renvoie [statut, message] si c'est refusé, sinon null. */
+function labVmProblem(lab, body, user) {
+  if (!LAB_VM_NAME.test(body.name ?? '')) return [400, String(body.name ?? '').length > 55 ? 'The name of a lab VM has at most 55 characters' : 'Invalid VM name'];
+  if (!Number.isInteger(body.memory_mb) || body.memory_mb < 64 || body.memory_mb > 1048576) return [400, 'memory_mb must be between 64 and 1048576'];
+  if (!Number.isInteger(body.vcpus) || body.vcpus < 1 || body.vcpus > 256) return [400, 'vcpus must be between 1 and 256'];
+  if (body.firmware && !['bios', 'uefi'].includes(body.firmware)) return [400, 'firmware must be one of ["bios", "uefi"]'];
+  if (body.role && !['vm', 'router'].includes(body.role)) return [422, 'Failed to deserialize the JSON body'];
+  const nics = body.networks ?? [];
+  if (nics.length > 8) return [400, 'A VM has at most 8 networks'];
+  const template = (templates.get(lab.hypervisor_id) ?? []).find((t) => t.id === body.template_id);
+  if (!template || !templateRights(template, user)) return [404, 'Template not found'];
+  if (body.version !== undefined && body.version !== null && !template.versions.some((v) => v.version === body.version)) return [404, 'Template version not found'];
+  const unknown = nics.find((n) => !lab.networks.some((net) => net.id === n));
+  if (unknown) return [404, `The lab has no network ${unknown}`];
+  return null;
+}
+
+/** Le « déploiement » : 4 s, puis les réseaux internes et les VM (routeurs d'abord). Un nom contenant « fail » rate. */
+function deploy(lab, instance, plan, start) {
+  setTimeout(() => {
+    if (instance.name.includes('fail')) {
+      Object.assign(instance, { status: 'failed', error: 'VM client: could not copy the template disk: No space left on device', networks: [], vms: [] });
+      return;
+    }
+    const suffix = instance.id.slice(0, 8);
+    instance.networks = lab.networks.map((n) => ({
+      network_id: n.id, name: n.name, kind: n.kind, libvirt_network: n.kind === 'external' ? n.libvirt_network : `lab-${suffix}-${n.name}`,
+    }));
+    const libvirtOf = (networkId) => instance.networks.find((n) => n.network_id === networkId)?.libvirt_network;
+    instance.vms = plan.map(({ vm }) => {
+      const created = addVm(lab.hypervisor_id, `${vm.name}-${suffix}`, vm.memory_mb, vm.vcpus, start ? 'running' : 'stopped', users.get(instance.owner_id));
+      return { lab_vm_id: vm.id, vm_id: created.id, name: created.name, role: vm.role, networks: vm.networks.map(libvirtOf) };
+    });
+    instance.status = 'ready';
+  }, 4000);
+}
+
+async function handleLabs(req, res, { id, subId, action, extra, method, url, user, forbidden }) {
+  const list = labs.get(id) ?? [];
+  const admin = isAdmin(user);
+  const segments = url.pathname.split('/').filter(Boolean); // api hypervisors {id} labs {lab} {action} {extra} {6} {7}
+
+  if (!subId && method === 'GET') {
+    const shown = list.map((lab) => [lab, labRights(lab, user)]).filter(([, rights]) => rights);
+    return send(res, 200, shown.sort(([a], [b]) => a.name.localeCompare(b.name)).map(([lab, rights]) => labView(lab, user, rights)));
+  }
+  if (!subId && method === 'POST') {
+    if (!admin) return forbidden();
+    const body = await readJson(req);
+    if (!body) return malformed(res);
+    const name = String(body.name ?? '').trim();
+    if (!name || name.length > 64) return err(res, 400, 'name must be 1 to 64 printable characters');
+    if ((body.description ?? '').length > 2000) return err(res, 400, 'description must be at most 2000 printable characters');
+    if (list.some((lab) => lab.name === name)) return err(res, 409, 'A lab with this name already exists on this hypervisor');
+    const lab = {
+      id: randomUUID(), hypervisor_id: id, name, description: body.description ?? '', visibility: body.visibility ?? 'restricted',
+      created_at: now(), updated_at: now(), permissions: [], networks: [], vms: [],
+    };
+    list.push(lab);
+    logAudit(user, 'lab.create', `${id}/${lab.id}`, name);
+    return send(res, 201, labDetailView(lab, user, labRights(lab, user)));
+  }
+
+  const lab = list.find((l) => l.id === subId);
+  const rights = lab ? labRights(lab, user) : null;
+  if (!lab || !rights) return err(res, 404, 'Lab not found');
+  const notManager = () => (manages(rights) ? false : (forbidden('You do not manage this lab'), true));
+  const touch = () => (lab.updated_at = now());
+
+  if (!action) {
+    if (method === 'GET') return send(res, 200, labDetailView(lab, user, rights));
+    if (method === 'PATCH') {
+      if (notManager()) return;
+      const body = await readJson(req);
+      if (!body) return malformed(res);
+      if (body.visibility !== undefined && !admin) return forbidden();
+      const name = body.name !== undefined ? String(body.name).trim() : lab.name;
+      if (!name || name.length > 64) return err(res, 400, 'name must be 1 to 64 printable characters');
+      if ((body.description ?? '').length > 2000) return err(res, 400, 'description must be at most 2000 printable characters');
+      if (list.some((l) => l.id !== lab.id && l.name === name)) return err(res, 409, 'A lab with this name already exists on this hypervisor');
+      Object.assign(lab, { name, description: body.description ?? lab.description, visibility: body.visibility ?? lab.visibility });
+      touch();
+      return send(res, 200, labDetailView(lab, user, rights));
+    }
+    if (method === 'DELETE') {
+      if (!admin) return forbidden();
+      const count = instancesOf(lab).length;
+      if (count) return err(res, 409, `The lab still has ${count} instance(s): delete them first`);
+      labs.set(id, list.filter((l) => l !== lab));
+      logAudit(user, 'lab.delete', `${id}/${lab.id}`, lab.name);
+      return send(res, 204);
+    }
+  }
+
+  if (action === 'networks') {
+    if (notManager()) return;
+    if (!extra && method === 'POST') {
+      const body = await readJson(req);
+      if (!body || !['external', 'internal'].includes(body.kind)) return malformed(res);
+      if (!LAB_NETWORK_NAME.test(body.name ?? '')) return err(res, 400, "A network name is 1 to 32 letters, digits, '-' or '_'");
+      if (body.kind === 'external') {
+        if (!body.libvirt_network) return err(res, 400, 'An external network needs libvirt_network: an existing network of the hypervisor');
+        if (!(networks.get(id) ?? []).some((n) => n.name === body.libvirt_network)) return err(res, 404, `The hypervisor has no libvirt network named ${body.libvirt_network}`);
+      } else if (body.libvirt_network) {
+        return err(res, 400, 'An internal network is created for each instance: no libvirt_network');
+      }
+      if (lab.networks.length >= 16) return err(res, 400, 'A lab has at most 16 networks');
+      if (lab.networks.some((n) => n.name === body.name)) return err(res, 409, 'The lab already has a network with this name');
+      const network = { id: randomUUID(), name: body.name, kind: body.kind, libvirt_network: body.kind === 'external' ? body.libvirt_network : null };
+      lab.networks.push(network);
+      touch();
+      return send(res, 201, network);
+    }
+    if (extra && method === 'DELETE') {
+      const network = lab.networks.find((n) => n.id === extra);
+      if (!network) return err(res, 404, 'Network not found');
+      const plugged = lab.vms.find((vm) => vm.networks.includes(network.id));
+      if (plugged) return err(res, 409, `The VM ${plugged.name} of the lab is plugged into this network: unplug it first`);
+      const used = instancesOf(lab).filter((i) => i.networks.some((n) => n.network_id === network.id)).length;
+      if (used) return err(res, 409, `${used} instance(s) of the lab were deployed with it: delete them first`);
+      lab.networks = lab.networks.filter((n) => n !== network);
+      touch();
+      return send(res, 204);
+    }
+  }
+
+  if (action === 'vms') {
+    if (notManager()) return;
+    if ((!extra && method === 'POST') || (extra && method === 'PUT')) {
+      const existing = extra ? lab.vms.find((vm) => vm.id === extra) : null;
+      if (extra && !existing) return err(res, 404, 'Lab VM not found');
+      const body = await readJson(req);
+      if (!body) return malformed(res);
+      const problem = labVmProblem(lab, body, user);
+      if (problem) return err(res, ...problem);
+      if (!existing && lab.vms.length >= 32) return err(res, 400, 'A lab has at most 32 VMs');
+      if (lab.vms.some((vm) => vm !== existing && vm.name === body.name)) return err(res, 409, 'The lab already has a VM with this name');
+      const values = {
+        name: body.name, role: body.role ?? 'vm', template_id: body.template_id, version: body.version ?? null,
+        memory_mb: body.memory_mb, vcpus: body.vcpus, firmware: body.firmware ?? 'bios', networks: body.networks ?? [],
+      };
+      const vm = existing ? Object.assign(existing, values) : { id: randomUUID(), ...values };
+      if (!existing) lab.vms.push(vm);
+      touch();
+      const template = templates.get(id).find((t) => t.id === vm.template_id);
+      return send(res, existing ? 200 : 201, { ...vm, template_name: template?.name });
+    }
+    if (extra && method === 'DELETE') {
+      const vm = lab.vms.find((v) => v.id === extra);
+      if (!vm) return err(res, 404, 'Lab VM not found');
+      const used = instancesOf(lab).filter((i) => i.vms.some((v) => v.lab_vm_id === vm.id)).length;
+      if (used) return err(res, 409, `${used} instance(s) of the lab were deployed with it: delete them first`);
+      lab.vms = lab.vms.filter((v) => v !== vm);
+      touch();
+      return send(res, 204);
+    }
+  }
+
+  if (action === 'permissions') {
+    if (!admin) return forbidden();
+    const [, , , , , , kindPath, principalId] = segments;
+    if (!extra && method === 'GET') {
+      const named = lab.permissions.map((p) => ({
+        ...p,
+        name: p.kind === 'user' ? users.get(p.id)?.username : groups.get(p.id)?.name,
+        ...(p.kind === 'user' ? { instance_count: instancesOf(lab, p.id).length } : {}),
+      }));
+      return send(res, 200, named.sort((a, b) => b.kind.localeCompare(a.kind) || a.name.localeCompare(b.name)));
+    }
+    const kind = { users: 'user', groups: 'group' }[kindPath];
+    if (!kind || !principalId) return err(res, 404, 'Route not found');
+    if (method === 'PUT') {
+      if (kind === 'user' && !users.has(principalId)) return err(res, 404, 'User not found');
+      if (kind === 'group' && !groups.has(principalId)) return err(res, 404, 'Group not found');
+      const body = await readJson(req);
+      if (!body) return malformed(res);
+      if (body.max_instances !== undefined && body.max_instances !== null && (!Number.isInteger(body.max_instances) || body.max_instances < 0)) {
+        return err(res, 400, 'max_instances must be 0 or more (null: no limit)');
+      }
+      if (body.role !== undefined && !['use', 'manage'].includes(body.role)) return malformed(res);
+      const existing = lab.permissions.find((p) => p.kind === kind && p.id === principalId);
+      const values = { role: body.role ?? 'use', max_instances: body.max_instances ?? null, updated_at: now() };
+      if (existing) Object.assign(existing, values);
+      else lab.permissions.push({ kind, id: principalId, created_at: now(), ...values });
+      logAudit(user, 'lab.permission', `${id}/${lab.id}`, `${kind} ${principalId}: ${values.role}`);
+      return send(res, 204);
+    }
+    if (method === 'DELETE') {
+      const before = lab.permissions.length;
+      lab.permissions = lab.permissions.filter((p) => !(p.kind === kind && p.id === principalId));
+      if (lab.permissions.length === before) return err(res, 404, 'Permission not found');
+      return send(res, 204);
+    }
+  }
+
+  if (action === 'instances') {
+    if (!extra && method === 'GET') {
+      return send(res, 200, instancesOf(lab, manages(rights) ? null : user.id).map(instanceView));
+    }
+    if (!extra && method === 'POST') {
+      const body = (await readJson(req)) ?? {};
+      const name = body.name !== undefined && body.name !== null ? String(body.name).trim() : lab.name;
+      if (!name || name.length > 64) return err(res, 400, 'name must be 1 to 64 printable characters');
+      if (lab.vms.length === 0) return err(res, 409, 'The lab has no VM to deploy');
+      const plan = [];
+      for (const vm of [...lab.vms].sort((a, b) => (b.role === 'router') - (a.role === 'router'))) {
+        const template = templates.get(id).find((t) => t.id === vm.template_id);
+        if (!template.allow_vm_creation) return err(res, 409, `VM ${vm.name}: creating VMs from the template ${template.name} is disabled`);
+        const built = builtVersions(template);
+        const version = vm.version === null ? built[built.length - 1] : built.find((v) => v.version === vm.version);
+        if (!version) {
+          return err(res, 409, vm.version === null
+            ? `VM ${vm.name}: the template ${template.name} has no built version yet`
+            : `VM ${vm.name}: version ${vm.version} of the template ${template.name} is not built`);
+        }
+        plan.push({ vm, version });
+      }
+      for (const network of lab.networks.filter((n) => n.kind === 'external')) {
+        const found = (networks.get(id) ?? []).find((n) => n.name === network.libvirt_network);
+        if (!found) return err(res, 409, `The external network ${network.libvirt_network} is missing from the hypervisor`);
+        if (found.status !== 'active') return err(res, 409, `The external network ${network.libvirt_network} is not active`);
+      }
+      const total = plan.reduce((sum, { vm, version }) => ({
+        vms: sum.vms + 1, vcpus: sum.vcpus + vm.vcpus, memory_mb: sum.memory_mb + vm.memory_mb, disk_gb: sum.disk_gb + (version.disk_size_gb ?? 0),
+      }), { vms: 0, vcpus: 0, memory_mb: 0, disk_gb: 0 });
+      const violation = quotaViolation(user, total);
+      if (violation) return forbidden(violation);
+      if (!admin && rights.max_instances !== null && instancesOf(lab, user.id).length >= rights.max_instances) {
+        return forbidden(`Lab limit reached: you may own at most ${rights.max_instances} instances of this lab`);
+      }
+      const instance = { id: randomUUID(), lab_id: lab.id, owner_id: user.id, name, status: 'deploying', error: null, created_at: now(), networks: [], vms: [] };
+      labInstances.push(instance);
+      logAudit(user, 'lab.deploy', `${id}/${lab.id}`, `${name} (${instance.id})`);
+      deploy(lab, instance, plan, body.start === true);
+      res.setHeader('Location', `/api/hypervisors/${id}/labs/${lab.id}/instances/${instance.id}`);
+      return send(res, 202, instanceView(instance));
+    }
+
+    const instance = labInstances.find((i) => i.id === extra && i.lab_id === lab.id);
+    if (!instance || (!manages(rights) && instance.owner_id !== user.id)) return err(res, 404, 'Instance not found');
+    const [, , , , , , , power] = segments;
+    const machines = () => instance.vms.map((v) => (vms.get(id) ?? []).find((vm) => vm.id === v.vm_id)).filter(Boolean);
+
+    if (!power && method === 'GET') return send(res, 200, instanceView(instance));
+    if (power === 'start' && method === 'POST') {
+      if (instance.status !== 'ready') return err(res, 409, 'The instance is not ready');
+      machines().forEach((vm) => (vm.status = 'running'));
+      return send(res, 200, instanceView(instance));
+    }
+    if (power === 'stop' && method === 'POST') {
+      if (instance.status !== 'ready') return err(res, 409, 'The instance is not ready');
+      // L'arrêt propre prend 2 s (comme une VM qui s'éteint), l'arrêt forcé est immédiat.
+      const off = () => machines().forEach((vm) => (vm.status = 'stopped'));
+      if (url.searchParams.get('force') === 'true') off();
+      else setTimeout(off, 2000);
+      return send(res, 200, instanceView(instance));
+    }
+    if (!power && method === 'DELETE') {
+      if (instance.status === 'deploying') return err(res, 409, 'The instance is still being deployed: wait for it to end');
+      const ids = new Set(instance.vms.map((v) => v.vm_id));
+      vms.set(id, (vms.get(id) ?? []).filter((vm) => !ids.has(vm.id)));
+      labInstances.splice(labInstances.indexOf(instance), 1);
+      logAudit(user, 'lab.instance_delete', `${id}/${lab.id}`, instance.name);
+      return send(res, 204);
+    }
   }
   return err(res, 404, 'Route not found');
 }

@@ -1,0 +1,89 @@
+@if (instance(); as instance) {
+  <app-page
+    [backLink]="'/hypervisors/' + id() + '/labs/' + labId()"
+    [backLabel]="instance.lab_name"
+    eyebrow="Instance de labo"
+    [title]="instance.name"
+    [subtitle]="'À ' + instance.owner + ' · créée le ' + date(instance.created_at)"
+  >
+    <app-status-badge actions [status]="instance.status" />
+    <ng-container actions>
+      @if (instance.status === 'ready') {
+        <app-button icon="play" [loading]="busy()" (pressed)="start()">Démarrer</app-button>
+        <app-button variant="ghost" icon="stop" [loading]="busy()" (pressed)="stop()">Arrêter</app-button>
+        <app-button variant="danger-ghost" icon="stop" (pressed)="stop(true)">Forcer l'arrêt</app-button>
+      }
+      @if (instance.status !== 'deploying') {
+        <app-button variant="danger-ghost" icon="trash" (pressed)="remove(instance)">Supprimer</app-button>
+      }
+    </ng-container>
+
+    @if (error(); as error) {
+      <app-error-panel [error]="error" [retryable]="true" (retry)="load()" />
+    }
+    @if (actionError(); as actionError) {
+      <app-error-panel [error]="actionError" />
+    }
+
+    @if (instance.status === 'deploying') {
+      <app-callout title="Déploiement en cours">
+        Les réseaux internes puis les VM (routeurs d'abord) sont en cours de création : la copie des disques peut prendre quelques minutes.
+        Cette page se met à jour toute seule.
+      </app-callout>
+    } @else if (instance.status === 'failed') {
+      <app-column [gap]="6">
+        <app-callout type="warning" title="Le déploiement a raté">
+          Ce qu'il avait créé a été supprimé. Supprimez l'instance, corrigez la cause (ci-dessous), puis déployez de nouveau.
+        </app-callout>
+        @if (instance.error) {
+          <app-code-block [code]="instance.error" title="raison" [maxHeight]="200" />
+        }
+      </app-column>
+    } @else {
+      <app-text color="muted">{{ running() }} VM en marche sur {{ instance.vms.length }}. Démarrer lance les routeurs d'abord ; Arrêter les éteint en dernier.</app-text>
+    }
+
+    <app-column [gap]="12">
+      <app-text variant="heading">Machines virtuelles</app-text>
+      @if (instance.vms.length === 0) {
+        <app-empty-state icon="cpu" title="Aucune VM" [message]="instance.status === 'deploying' ? 'Elles apparaissent au fur et à mesure.' : 'Cette instance n’a pas de VM.'" />
+      } @else {
+        <app-list>
+          @for (vm of instance.vms; track vm.lab_vm_id) {
+            <app-list-tile
+              [icon]="vm.role === 'router' ? 'network' : 'cpu'"
+              [title]="vm.name"
+              [subtitle]="vmSubtitle(vm)"
+              [status]="vm.status"
+              [clickable]="vm.status !== 'missing'"
+              (tap)="openVm(vm)"
+            >
+              @if (vm.status !== 'missing') {
+                <app-button variant="ghost" size="sm" icon="terminal" (pressed)="openVm(vm)">Ouvrir</app-button>
+              }
+            </app-list-tile>
+          }
+        </app-list>
+      }
+    </app-column>
+
+    <app-column [gap]="12">
+      <app-text variant="heading">Réseaux</app-text>
+      @if (instance.networks.length === 0) {
+        <app-text color="muted">Aucun réseau.</app-text>
+      } @else {
+        <app-list>
+          @for (network of instance.networks; track network.network_id) {
+            <app-list-tile icon="network" [title]="network.name" [subtitle]="networkSubtitle(network)" />
+          }
+        </app-list>
+      }
+    </app-column>
+  </app-page>
+} @else if (error(); as error) {
+  <app-page [backLink]="'/hypervisors/' + id() + '/labs/' + labId()" backLabel="Labo" title="Instance de labo">
+    <app-error-panel [error]="error" [retryable]="true" (retry)="load()" />
+  </app-page>
+} @else {
+  <app-loading label="Chargement de l'instance…" />
+}

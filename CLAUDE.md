@@ -84,6 +84,7 @@ npx ng build            # DOIT finir sans erreur NI avertissement
 src/app/
 ├── app.component.*, app.config.ts, app.routes.ts
 ├── pages/                home, login, account, learn, hypervisor-list, hypervisor-detail, vm-detail, template-detail,
+│                         lab-detail, lab-instance-detail,
 │                         admin-users, admin-groups, group-detail, admin-audit, not-found
 ├── components/
 │   ├── layout/           column, row, padding, sized-box, center, expanded, spacer, grid, card, divider, page
@@ -96,10 +97,12 @@ src/app/
 │       vm-share-modal, vm-owner-modal, vm-list, disk-list, network-list,
 │       template-list, template-form-modal, template-delete-modal, template-vm-modal, template-log-modal,
 │       template-permission-list + template-permission-modal,
+│       lab-list, lab-form-modal, lab-network-modal, lab-vm-modal, lab-definition, lab-instance-modal,
+│       lab-instance-list, lab-permission-list + lab-permission-modal, my-lab-instance-list,
 │       hypervisor-access-list + hypervisor-access-modal, user-picker,
 │       user-form-modal, user-quota-modal, user-password-modal, password-form-modal,
 │       group-form-modal, group-member-modal, group-subgroup-modal, user-group-list, user-groups-modal   (composants métier)
-├── services/             auth (session, jetons), hypervisor, vm, template, group, share (prêts), user, admin (réglages, audit, accès),
+├── services/             auth (session, jetons), hypervisor, vm, template, lab, group, share (prêts), user, admin (réglages, audit, accès),
 │                         job, inventory (arbre de la barre latérale), infrastructure (API), modal (+ modal-ref), context-bridge
 ├── models/               types recopiés de src/models.rs de l'API, et app-error.model.ts
 ├── interceptors/         auth.interceptor.ts (jeton + refresh), error.interceptor.ts
@@ -219,8 +222,17 @@ mainteneur a conçue en entreprise. Respectez leur contrat.
   liste se recharge toutes les 5 s et la page toutes les 3 s pendant une construction ; le journal se lit par
   morceaux (`offset` = `next_offset`). **Activer / désactiver** (`allow_vm_creation`) : désactivé, l'API refuse
   toute création de VM (409) mais liste encore le template ; l'interface le cache à ceux qui ne le gèrent pas.
+- **Labos** (`labs.rs` de l'API) : une définition (réseaux `external` = réseau libvirt existant, partagé ; `internal`
+  = isolé, créé par instance ; VM issues de templates, rôle `router` créé et démarré d'abord, cartes réseau **dans
+  l'ordre**) que l'on **déploie** en instances (202 → `deploying` → `ready` | `failed`, page rechargée toutes les 3 s).
+  Les VM d'une instance appartiennent à celui qui déploie : les routes et la page des VM marchent dessus.
+  Droits comme les templates (`access` : `level`, `max_instances`, `instance_count` ; `canManageLab`, `labLimitReached`) :
+  `use` = déployer et piloter ses instances ; `manage` = aussi modifier la définition et piloter toutes les instances ;
+  admin = créer / supprimer un labo, visibilité (`restricted` par défaut), droits. Pages `lab-detail` et
+  `lab-instance-detail` **sans garde**. 403 « Lab limit reached » → `QUOTA_EXCEEDED` ; autres textes dans
+  `LAB_MESSAGES`. Même limite que les templates : un droit sur un labo ne rend pas l'hyperviseur visible.
 - **Groupes** (`groups.rs` de l'API) : des groupes d'utilisateurs qui contiennent aussi des groupes (sans cycle :
-  l'API répond 409, texte français dans `GROUP_MESSAGES` du mapper). Ils ne donnent encore aucun droit.
+  l'API répond 409, texte français dans `GROUP_MESSAGES` du mapper). Ils servent aux droits sur les templates et les labos.
   Admin seulement : pages `/admin/groups` et `/admin/groups/:groupId` (`adminGuard`, lien « Groupes » de la barre
   latérale), bouton « Groupes » par utilisateur (`user-groups-modal`). Chacun voit ses groupes, en lecture seule,
   dans « Mon compte » (`user-group-list`, `GET /api/me/groups`). `group-detail` recharge via un `effect()` car

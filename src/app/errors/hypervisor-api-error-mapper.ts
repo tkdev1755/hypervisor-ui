@@ -105,6 +105,44 @@ const TEMPLATE_MESSAGES: { pattern: RegExp; message: string }[] = [
   { pattern: /^packer_config/i, message: 'La configuration Packer est vide ou trop longue (64 Ko au maximum).' },
   { pattern: /^Invalid pool/i, message: 'Le nom du pool est invalide.' },
   { pattern: /^max_vms must be/i, message: 'La limite de VM doit être 0 ou plus (vide : sans limite).' },
+  { pattern: /template is used by the lab (.+): remove/i, message: 'Ce template est utilisé par un labo : retirez-le d’abord des VM de ce labo.' },
+];
+
+/**
+ * Même principe pour les labos (labs.rs) : leurs 409, 400 et certains 404 ont des raisons précises.
+ * « VM x: … » : un déploiement refusé à cause d'une VM du labo (le nom de la VM est repris dans le texte).
+ */
+const LAB_MESSAGES: { pattern: RegExp; message: string }[] = [
+  { pattern: /lab with this name already exists/i, message: 'Un labo porte déjà ce nom sur cet hyperviseur.' },
+  { pattern: /lab still has \d+ instance/i, message: 'Ce labo a encore des instances : supprimez-les d’abord.' },
+  { pattern: /already has a network with this name/i, message: 'Le labo a déjà un réseau de ce nom.' },
+  { pattern: /already has a VM with this name/i, message: 'Le labo a déjà une VM de ce nom.' },
+  { pattern: /plugged into this network: unplug/i, message: 'Une VM du labo est branchée sur ce réseau : retirez-le d’abord de ses cartes réseau.' },
+  { pattern: /instance\(s\) of the lab were deployed with it/i, message: 'Des instances ont été déployées avec cet élément : supprimez-les d’abord.' },
+  { pattern: /has no libvirt network named/i, message: 'L’hyperviseur n’a pas de réseau libvirt de ce nom.' },
+  { pattern: /external network needs libvirt_network/i, message: 'Un réseau externe doit désigner un réseau libvirt existant de l’hyperviseur.' },
+  { pattern: /internal network is created for each instance/i, message: 'Un réseau interne est créé pour chaque instance : il ne désigne pas de réseau libvirt.' },
+  { pattern: /external network .* is missing/i, message: 'Un réseau externe du labo n’existe plus sur l’hyperviseur : un gestionnaire doit corriger le labo.' },
+  { pattern: /external network .* is not active/i, message: 'Un réseau externe du labo n’est pas démarré sur l’hyperviseur.' },
+  { pattern: /lab has no VM to deploy/i, message: 'Ce labo n’a encore aucune VM : ajoutez-en avant de le déployer.' },
+  { pattern: /creating VMs from the template .* is disabled/i, message: 'Une VM du labo vient d’un template désactivé : un administrateur doit l’activer.' },
+  { pattern: /no built version yet|version \d+ of the template .* is not built/i, message: 'Une VM du labo vient d’un template sans version prête (ou d’une version qui n’est pas prête).' },
+  { pattern: /still being deployed/i, message: 'L’instance est en cours de déploiement : attendez la fin.' },
+  { pattern: /instance is not ready/i, message: 'L’instance n’est pas prête (déploiement en cours ou raté).' },
+  { pattern: /A lab has at most \d+ networks/i, message: 'Un labo a au plus 16 réseaux.' },
+  { pattern: /A lab has at most \d+ VMs/i, message: 'Un labo a au plus 32 VM.' },
+  { pattern: /A VM has at most \d+ networks/i, message: 'Une VM a au plus 8 cartes réseau.' },
+  { pattern: /name of a lab VM has at most/i, message: 'Le nom d’une VM de labo fait au plus 55 caractères.' },
+  { pattern: /network name is 1 to/i, message: 'Le nom d’un réseau fait de 1 à 32 caractères : lettres, chiffres, « - » ou « _ ».' },
+  { pattern: /lab has no network/i, message: 'Un des réseaux choisis n’existe plus dans le labo : rechargez la page.' },
+  { pattern: /^Template not found/i, message: 'Template introuvable, ou vous n’avez pas le droit de l’utiliser.' },
+  { pattern: /^Template version not found/i, message: 'Cette version du template n’existe pas.' },
+  { pattern: /^(memory_mb|vcpus) must be between/i, message: 'La mémoire ou les vCPU sont hors des limites.' },
+  { pattern: /^firmware must be/i, message: 'Le firmware doit être BIOS ou UEFI.' },
+  { pattern: /^name must be/i, message: 'Le nom doit faire de 1 à 64 caractères imprimables.' },
+  { pattern: /^description must be/i, message: 'La description fait au plus 2000 caractères.' },
+  { pattern: /^max_instances must be/i, message: 'La limite d’instances doit être 0 ou plus (vide : sans limite).' },
+  { pattern: /VM with this name already exists/i, message: 'Une VM de ce nom existe déjà sur l’hyperviseur.' },
 ];
 
 /** Même principe pour les groupes (groups.rs). */
@@ -169,6 +207,11 @@ export class HypervisorApiErrorMapper implements ErrorMapper {
       if (templateLimit) {
         return `Limite atteinte pour ce template : vous pouvez posséder au plus ${templateLimit[1]} VM créée(s) à partir de lui. Un administrateur peut la changer.`;
       }
+      // « Lab limit reached: you may own at most 2 instances of this lab » : la limite d'un labo.
+      const labLimit = /at most (\d+) instances of this lab/.exec(body?.content ?? '');
+      if (labLimit) {
+        return `Limite atteinte pour ce labo : vous pouvez posséder au plus ${labLimit[1]} instance(s). Supprimez-en une, ou demandez à un administrateur de changer la limite.`;
+      }
       return quotaMessage(body?.content) ?? CATALOG[code].message;
     }
     if ((code === 'CONFLICT' || code === 'INVALID_REQUEST') && origin.endpoint.includes('/templates')) {
@@ -176,6 +219,17 @@ export class HypervisorApiErrorMapper implements ErrorMapper {
       if (found) {
         return found.message;
       }
+    }
+    // Les labos d'abord : leurs adresses ne contiennent pas « /templates », mais leurs messages parlent de templates.
+    if ((code === 'CONFLICT' || code === 'INVALID_REQUEST' || code === 'NOT_FOUND') && origin.endpoint.includes('/labs')) {
+      const found = LAB_MESSAGES.find((entry) => entry.pattern.test(body?.content ?? ''));
+      if (found) {
+        return found.message;
+      }
+    }
+    // Supprimer un hyperviseur où des instances de labos sont déployées.
+    if (code === 'CONFLICT' && /lab instance\(s\) are deployed on this hypervisor/i.test(body?.content ?? '')) {
+      return 'Des instances de labos sont déployées sur cet hyperviseur : supprimez-les d’abord (page de chaque labo).';
     }
     if ((code === 'CONFLICT' || code === 'INVALID_REQUEST') && origin.endpoint.startsWith('/api/groups')) {
       const found = GROUP_MESSAGES.find((entry) => entry.pattern.test(body?.content ?? ''));
@@ -204,7 +258,7 @@ export class HypervisorApiErrorMapper implements ErrorMapper {
           : 'SESSION_EXPIRED';
       // 403 : « tu existes mais tu n'as pas le droit » ; un quota dépassé est aussi un 403, repérable à son message.
       case 403:
-        return /quota exceeded|template limit reached/i.test(body?.content ?? '') ? 'QUOTA_EXCEEDED' : 'FORBIDDEN';
+        return /quota exceeded|template limit reached|lab limit reached/i.test(body?.content ?? '') ? 'QUOTA_EXCEEDED' : 'FORBIDDEN';
       case 429:
         return 'TOO_MANY_ATTEMPTS';
       case 400:
