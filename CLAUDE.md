@@ -74,8 +74,8 @@ npx ng build            # DOIT finir sans erreur NI avertissement
 ```text
 src/app/
 ├── app.component.*, app.config.ts, app.routes.ts
-├── pages/                home, login, account, learn, hypervisor-list, hypervisor-detail, vm-detail,
-│                         admin-users, admin-audit, not-found
+├── pages/                home, login, account, learn, hypervisor-list, hypervisor-detail, vm-detail, template-detail,
+│                         admin-users, admin-groups, group-detail, admin-audit, not-found
 ├── components/
 │   ├── layout/           column, row, padding, sized-box, center, expanded, spacer, grid, card, divider, page
 │   ├── ui/               text, inline-code, button, icon (+ icons.ts), status-badge, text-field, choice-cards,
@@ -85,9 +85,12 @@ src/app/
 │   ├── shell/            barre latérale (+ sidebar-inventory : arbre hyperviseurs → VM) + <router-outlet>
 │   └── hypervisor-form-modal, vm-form-modal, vm-clone-modal, vm-delete-modal, vm-console-modal,
 │       vm-share-modal, vm-owner-modal, vm-list, disk-list, network-list,
+│       template-list, template-form-modal, template-delete-modal, template-vm-modal, template-log-modal,
+│       template-permission-list + template-permission-modal,
 │       hypervisor-access-list + hypervisor-access-modal, user-picker,
-│       user-form-modal, user-quota-modal, user-password-modal, password-form-modal   (composants métier)
-├── services/             auth (session, jetons), hypervisor, vm, share (prêts), user, admin (réglages, audit, accès),
+│       user-form-modal, user-quota-modal, user-password-modal, password-form-modal,
+│       group-form-modal, group-member-modal, group-subgroup-modal, user-group-list, user-groups-modal   (composants métier)
+├── services/             auth (session, jetons), hypervisor, vm, template, group, share (prêts), user, admin (réglages, audit, accès),
 │                         job, inventory (arbre de la barre latérale), infrastructure (API), modal (+ modal-ref), context-bridge
 ├── models/               types recopiés de src/models.rs de l'API, et app-error.model.ts
 ├── interceptors/         auth.interceptor.ts (jeton + refresh), error.interceptor.ts
@@ -95,7 +98,8 @@ src/app/
 ├── errors/               error-mapper.ts (contrat + token), hypervisor-api-error-mapper.ts (catalogue FR)
 ├── config/               context-descriptors.ts
 └── utils/                api-context.ts (étiquette HTTP par API), layout.ts (alignements),
-                          vm-access.ts (droits sur une VM), quota.ts (lignes de quota)
+                          vm-access.ts (droits sur une VM), quota.ts (lignes de quota),
+                          packer-example.ts (exemple Debian 12, lecture de vm_name)
 src/styles/               _tokens.scss (variables), _bootstrap.scss (Bootstrap configuré), _base.scss
 mock-api/server.mjs       fausse API Node sans dépendance
 ```
@@ -186,6 +190,31 @@ mainteneur a conçue en entreprise. Respectez leur contrat.
   dépendant de l'utilisateur doit y être vidé aussi.
 - `VirtualMachine.owner` / `access` (`'admin' | 'owner' | 'shared'`) pilotent l'affichage
   (`utils/vm-access.ts`) : une VM prêtée n'offre que console, démarrer, arrêter, « Rendre ».
+- **Templates** (`templates.rs` de l'API) : une définition modifiable (configuration Packer, disque, pool,
+  visibilité) et des **versions** numérotées (une par construction : disque, état, journal).
+  **Droits** : chaque template renvoie `access` (`level` : `use` | `manage` | `admin`, `max_vms`, `vm_count`) ;
+  l'interface s'y fie (`canManageTemplate`, `templateLimitReached` dans `models/template.model.ts`), jamais au
+  seul `auth.isAdmin()`. Un droit (`…/permissions/users|groups/{id}`, admin seulement, onglet « Droits ») va à
+  un utilisateur ou à un groupe (groupes imbriqués compris) : `use` = voir les versions prêtes et créer des VM
+  (dans la limite `max_vms`, 403 « Template limit reached » → `QUOTA_EXCEEDED`) ; `manage` = aussi modifier
+  (sauf la visibilité : ne pas l'envoyer, 403), activer/désactiver, reconstruire, arrêter, journaux, supprimer
+  une version. Un template `hypervisor` est aussi utilisable par ceux qui ont l'accès à l'hyperviseur.
+  Créer / supprimer un template, changer sa visibilité, donner des droits : admin. La page `template-detail`
+  n'a donc **pas de garde** : elle lit `access` (message pour un simple utilisateur). Un droit suffit pour créer
+  une VM sans accès à l'hyperviseur : `vm-options` répond alors 403, et `template-vm-modal` / `template-form-modal`
+  se rabattent sur des valeurs par défaut. **Limite connue de l'API** : un utilisateur qui n'a qu'un droit sur
+  un template (ni accès ni VM sur l'hyperviseur) ne voit pas l'hyperviseur (`VISIBLE_HYPERVISORS`), donc pas
+  l'onglet Templates.
+  Le reste : `default_version` = dernière version **prête** (VM possibles pendant une reconstruction) ; la
+  liste se recharge toutes les 5 s et la page toutes les 3 s pendant une construction ; le journal se lit par
+  morceaux (`offset` = `next_offset`). **Activer / désactiver** (`allow_vm_creation`) : désactivé, l'API refuse
+  toute création de VM (409) mais liste encore le template ; l'interface le cache à ceux qui ne le gèrent pas.
+- **Groupes** (`groups.rs` de l'API) : des groupes d'utilisateurs qui contiennent aussi des groupes (sans cycle :
+  l'API répond 409, texte français dans `GROUP_MESSAGES` du mapper). Ils ne donnent encore aucun droit.
+  Admin seulement : pages `/admin/groups` et `/admin/groups/:groupId` (`adminGuard`, lien « Groupes » de la barre
+  latérale), bouton « Groupes » par utilisateur (`user-groups-modal`). Chacun voit ses groupes, en lecture seule,
+  dans « Mon compte » (`user-group-list`, `GET /api/me/groups`). `group-detail` recharge via un `effect()` car
+  ouvrir un sous-groupe ou un parent ne change que `groupId` (même composant).
 - La suppression de réseau est **masquée** (la vraie API n'a pas de `DELETE …/networks/{id}`) :
   `NetworkDeleteModalComponent` et `deleteNetwork` existent, à rebrancher quand la route existera.
 

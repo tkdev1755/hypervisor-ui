@@ -1,0 +1,19 @@
+<app-modal-shell
+  [title]="'Ajouter un membre à ' + groupName()"
+  [state]="state()"
+  [error]="error()"
+  loadingLabel="Ajout…"
+  successMessage="Membre ajouté."
+  (retry)="state.set('form')"
+  (done)="modalRef.close(true)"
+>
+  <app-user-picker label="Utilisateur" [exclude]="alreadyMembers()" [(value)]="userId" />
+  @if (userError(); as message) {
+    <app-text variant="small" color="danger">{{ message }}</app-text>
+  }
+
+  <app-row footer [gap]="8">
+    <app-button variant="ghost" (pressed)="modalRef.close()">Annuler</app-button>
+    <app-button (pressed)="submit()">Ajouter</app-button>
+  </app-row>
+</app-modal-shell>

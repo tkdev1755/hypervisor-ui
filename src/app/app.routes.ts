@@ -50,6 +50,13 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/vm-detail/vm-detail.component').then((m) => m.VmDetailComponent),
       },
       {
+        // La page d'un template : pour ceux qui le gèrent (droit 'manage') et les admins. Pas de garde ici :
+        // le droit dépend du template, c'est la page qui lit `access` (et l'API qui fait respecter).
+        path: 'hypervisors/:id/templates/:templateId',
+        title: 'Template · Hypervisor',
+        loadComponent: () => import('./pages/template-detail/template-detail.component').then((m) => m.TemplateDetailComponent),
+      },
+      {
         path: 'account',
         title: 'Mon compte · Hypervisor',
         loadComponent: () => import('./pages/account/account.component').then((m) => m.AccountComponent),
@@ -59,6 +66,19 @@ export const routes: Routes = [
         title: 'Utilisateurs · Hypervisor',
         canActivate: [adminGuard],
         loadComponent: () => import('./pages/admin-users/admin-users.component').then((m) => m.AdminUsersComponent),
+      },
+      {
+        path: 'admin/groups',
+        title: 'Groupes · Hypervisor',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./pages/admin-groups/admin-groups.component').then((m) => m.AdminGroupsComponent),
+      },
+      {
+        // :groupId devient l'input() `groupId` de la page.
+        path: 'admin/groups/:groupId',
+        title: 'Groupe · Hypervisor',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./pages/group-detail/group-detail.component').then((m) => m.GroupDetailComponent),
       },
       {
         path: 'admin/audit',

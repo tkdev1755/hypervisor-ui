@@ -26,7 +26,7 @@ npm install
 |---|---|
 | `cargo run` dans hypervisor-api | Sous Linux avec libvirt : la vraie API. |
 | `npm run mock` | Sans Linux : une fausse API, avec les mêmes routes. |
-| `npm run mock:full` | La fausse API, avec des VM, disques et réseaux d'exemple. |
+| `npm run mock:full` | La fausse API, avec des VM, disques, réseaux et templates d'exemple. |
 
 Les deux écoutent sur le port 3000. Dans la fausse API, une URI contenant
 `fail` simule un hôte libvirt injoignable.

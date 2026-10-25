@@ -2,18 +2,32 @@
   @if (label()) {
     <label class="field-label" [for]="id">{{ label() }}</label>
   }
-  <input
-    class="form-control"
-    [class.font-monospace]="monospace()"
-    [class.is-invalid]="!!error()"
-    [id]="id"
-    [type]="type()"
-    [placeholder]="placeholder()"
-    [value]="value()"
-    (input)="onInput($event)"
-    (keydown.enter)="enter.emit()"
-    autocomplete="off"
-  />
+  @if (rows() > 1) {
+    <textarea
+      class="form-control"
+      [class.font-monospace]="monospace()"
+      [class.is-invalid]="!!error()"
+      [id]="id"
+      [rows]="rows()"
+      [placeholder]="placeholder()"
+      [value]="value()"
+      (input)="onInput($event)"
+      spellcheck="false"
+    ></textarea>
+  } @else {
+    <input
+      class="form-control"
+      [class.font-monospace]="monospace()"
+      [class.is-invalid]="!!error()"
+      [id]="id"
+      [type]="type()"
+      [placeholder]="placeholder()"
+      [value]="value()"
+      (input)="onInput($event)"
+      (keydown.enter)="enter.emit()"
+      autocomplete="off"
+    />
+  }
   @if (error()) {
     <app-text variant="small" color="danger">{{ error() }}</app-text>
   } @else if (hint()) {

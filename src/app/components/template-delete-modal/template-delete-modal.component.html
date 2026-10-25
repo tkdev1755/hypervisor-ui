@@ -1,0 +1,19 @@
+<app-modal-shell
+  [title]="'Supprimer « ' + template().name + ' » ?'"
+  [state]="state()"
+  [error]="error()"
+  loadingLabel="Suppression du template…"
+  successMessage="Template supprimé."
+  (retry)="state.set('form')"
+  (done)="modalRef.close(true)"
+>
+  <app-column [gap]="12">
+    <app-text>Le template, toutes ses versions et leurs disques (pool {{ template().pool }}) seront supprimés définitivement.</app-text>
+    <app-text color="muted">Les VM déjà créées à partir de lui ne sont pas touchées : elles ont leur propre copie du disque.</app-text>
+  </app-column>
+
+  <app-row footer [gap]="8">
+    <app-button variant="ghost" (pressed)="modalRef.close()">Annuler</app-button>
+    <app-button variant="danger" (pressed)="confirm()">Supprimer</app-button>
+  </app-row>
+</app-modal-shell>

@@ -1,0 +1,26 @@
+<app-modal-shell
+  [title]="'Ajouter un sous-groupe à ' + groupName()"
+  subtitle="Les membres du sous-groupe feront aussi partie de ce groupe."
+  [state]="state()"
+  [error]="error()"
+  [loadingLabel]="loadingLabel()"
+  successMessage="Sous-groupe ajouté."
+  (retry)="retry()"
+  (done)="modalRef.close(true)"
+>
+  <app-column [gap]="8">
+    @if (choices().length === 0) {
+      <app-text color="muted">Aucun autre groupe à proposer : créez-en un depuis la page Groupes.</app-text>
+    } @else {
+      <app-choice-cards label="Groupe" [columns]="2" [options]="choices()" [(value)]="childId" />
+    }
+    @if (childError(); as message) {
+      <app-text variant="small" color="danger">{{ message }}</app-text>
+    }
+  </app-column>
+
+  <app-row footer [gap]="8">
+    <app-button variant="ghost" (pressed)="modalRef.close()">Annuler</app-button>
+    <app-button [disabled]="choices().length === 0" (pressed)="submit()">Ajouter</app-button>
+  </app-row>
+</app-modal-shell>

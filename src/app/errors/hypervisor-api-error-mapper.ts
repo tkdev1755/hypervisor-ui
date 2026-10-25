@@ -79,6 +79,43 @@ function quotaMessage(content: string | undefined): string | null {
   return `Limite atteinte pour le ${label} : ${max} au maximum${requested ? ` (${requested} demandé${Number(requested) > 1 ? 's' : ''})` : ''}. Un administrateur peut augmenter votre quota.`;
 }
 
+/**
+ * Les templates ont plusieurs raisons très différentes de répondre 409 (ou 400) : le texte générique
+ * du catalogue n'aiderait pas. On reconnaît le message anglais de l'API (templates.rs) et on affiche
+ * le texte français qui lui correspond. Le premier motif qui correspond l'emporte.
+ */
+const TEMPLATE_MESSAGES: { pattern: RegExp; message: string }[] = [
+  { pattern: /template with this name already exists/i, message: 'Un template porte déjà ce nom sur cet hyperviseur.' },
+  { pattern: /template is being built: stop/i, message: "Le template est en construction : arrêtez d'abord la construction pour le supprimer." },
+  { pattern: /version is being built: stop/i, message: "Cette version est en construction : arrêtez d'abord la construction pour la supprimer." },
+  { pattern: /build of this template is already running/i, message: 'Une construction de ce template est déjà en cours : attendez sa fin ou arrêtez-la.' },
+  { pattern: /No build of this template is running/i, message: "Aucune construction de ce template n'est en cours (elle vient sans doute de se terminer)." },
+  { pattern: /Creating VMs from this template is disabled/i, message: "Ce template est désactivé : un administrateur doit l'activer pour qu'on puisse créer des VM à partir de lui." },
+  { pattern: /no built version yet/i, message: "Le template n'a encore aucune version prête : attendez la fin de sa construction." },
+  { pattern: /version of the template is not built/i, message: "Cette version du template n'est pas prête." },
+  { pattern: /Invalid offset/i, message: 'Le journal a changé : rechargez-le depuis le début.' },
+  { pattern: /disk of the template is in use/i, message: "Le disque du template est en cours d'utilisation (une VM est en train d'être créée à partir de lui). Réessayez dans un instant." },
+  { pattern: /disk of the template is missing/i, message: "Le disque du template a disparu de son pool : un administrateur doit le reconstruire." },
+  { pattern: /VM with this name already exists/i, message: 'Une VM porte déjà ce nom sur cet hyperviseur.' },
+  { pattern: /volume named .* already exists/i, message: 'Un disque de ce nom existe déjà dans le pool : choisissez un autre nom.' },
+  { pattern: /network is not active/i, message: "Le réseau choisi n'est pas démarré sur l'hyperviseur." },
+  { pattern: /storage pool .* is not active/i, message: "Le pool de stockage n'est pas démarré sur l'hyperviseur." },
+  { pattern: /need a local or qemu\+ssh/i, message: 'Les templates demandent un hyperviseur local ou en qemu+ssh:// : Packer est lancé par SSH.' },
+  { pattern: /^disk_name/i, message: 'Le nom du fichier disque doit faire de 1 à 64 caractères : lettres, chiffres, « - », « _ » ou « . » (pas au début).' },
+  { pattern: /^packer_config/i, message: 'La configuration Packer est vide ou trop longue (64 Ko au maximum).' },
+  { pattern: /^Invalid pool/i, message: 'Le nom du pool est invalide.' },
+  { pattern: /^max_vms must be/i, message: 'La limite de VM doit être 0 ou plus (vide : sans limite).' },
+];
+
+/** Même principe pour les groupes (groups.rs). */
+const GROUP_MESSAGES: { pattern: RegExp; message: string }[] = [
+  { pattern: /group with this name already exists/i, message: 'Un groupe porte déjà ce nom (les majuscules ne comptent pas).' },
+  { pattern: /would put the group inside itself/i, message: 'Impossible : ce groupe contient déjà, directement ou non, le groupe dans lequel vous voulez le mettre. Un groupe ne peut pas se retrouver dans lui-même.' },
+  { pattern: /cannot contain itself/i, message: 'Un groupe ne peut pas se contenir lui-même.' },
+  { pattern: /^name must be/i, message: 'Le nom doit faire de 1 à 64 caractères imprimables.' },
+  { pattern: /^description must be/i, message: 'La description fait au plus 500 caractères.' },
+];
+
 /** L'API répond { status, content } en cas d'erreur (voir common.rs). */
 function asApiMessage(body: unknown): ApiMessage | null {
   if (typeof body === 'object' && body !== null && 'status' in body && 'content' in body) {
@@ -127,7 +164,24 @@ export class HypervisorApiErrorMapper implements ErrorMapper {
   /** Le texte du catalogue, sauf pour les cas où le contexte permet d'être plus précis. */
   private messageFor(code: BusinessErrorCode, origin: ErrorOrigin, body: ApiMessage | null): string {
     if (code === 'QUOTA_EXCEEDED') {
+      // « Template limit reached: you may own at most 2 VMs from this template » : la limite d'un template.
+      const templateLimit = /at most (\d+) VMs from this template/.exec(body?.content ?? '');
+      if (templateLimit) {
+        return `Limite atteinte pour ce template : vous pouvez posséder au plus ${templateLimit[1]} VM créée(s) à partir de lui. Un administrateur peut la changer.`;
+      }
       return quotaMessage(body?.content) ?? CATALOG[code].message;
+    }
+    if ((code === 'CONFLICT' || code === 'INVALID_REQUEST') && origin.endpoint.includes('/templates')) {
+      const found = TEMPLATE_MESSAGES.find((entry) => entry.pattern.test(body?.content ?? ''));
+      if (found) {
+        return found.message;
+      }
+    }
+    if ((code === 'CONFLICT' || code === 'INVALID_REQUEST') && origin.endpoint.startsWith('/api/groups')) {
+      const found = GROUP_MESSAGES.find((entry) => entry.pattern.test(body?.content ?? ''));
+      if (found) {
+        return found.message;
+      }
     }
     if (code === 'INVALID_CREDENTIALS' && origin.endpoint.startsWith('/api/me/password')) {
       return 'Le mot de passe actuel est incorrect.';
@@ -150,7 +204,7 @@ export class HypervisorApiErrorMapper implements ErrorMapper {
           : 'SESSION_EXPIRED';
       // 403 : « tu existes mais tu n'as pas le droit » ; un quota dépassé est aussi un 403, repérable à son message.
       case 403:
-        return /quota exceeded/i.test(body?.content ?? '') ? 'QUOTA_EXCEEDED' : 'FORBIDDEN';
+        return /quota exceeded|template limit reached/i.test(body?.content ?? '') ? 'QUOTA_EXCEEDED' : 'FORBIDDEN';
       case 429:
         return 'TOO_MANY_ATTEMPTS';
       case 400:

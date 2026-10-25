@@ -34,6 +34,7 @@
           [status]="user.disabled ? 'inactive' : 'active'"
         >
           <app-button variant="ghost" size="sm" icon="edit" (pressed)="editQuota(user)">Quotas</app-button>
+          <app-button variant="ghost" size="sm" icon="folder" (pressed)="showGroups(user)">Groupes</app-button>
           <app-button variant="ghost" size="sm" icon="key" (pressed)="resetPassword(user)">Mot de passe</app-button>
           @if (user.id !== myId()) {
             <app-button variant="ghost" size="sm" icon="shield" (pressed)="toggleRole(user)">

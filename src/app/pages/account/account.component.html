@@ -1,5 +1,5 @@
 @if (auth.user(); as user) {
-  <app-page eyebrow="Compte" [title]="user.username" subtitle="Votre rôle, vos limites et votre mot de passe.">
+  <app-page eyebrow="Compte" [title]="user.username" subtitle="Votre rôle, vos limites, vos groupes et votre mot de passe.">
     <app-button actions variant="ghost" icon="key" (pressed)="changePassword()">Changer mon mot de passe</app-button>
     <app-button actions variant="ghost" icon="logout" (pressed)="auth.logout()">Se déconnecter</app-button>
 
@@ -37,6 +37,12 @@
           </app-card>
         }
       </app-grid>
+    </app-column>
+
+    <app-column [gap]="12">
+      <app-text variant="heading">Mes groupes</app-text>
+      <app-text color="muted">Les groupes dont vous faites partie, directement ou par un groupe imbriqué. Seul un administrateur peut les modifier.</app-text>
+      <app-user-group-list />
     </app-column>
   </app-page>
 }

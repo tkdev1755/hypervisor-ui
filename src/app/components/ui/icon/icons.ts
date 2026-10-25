@@ -39,6 +39,8 @@ export const ICONS = {
   shield: ['M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'],
   list: ['M8 6h13', 'M8 12h13', 'M8 18h13', 'M3 6h.01', 'M3 12h.01', 'M3 18h.01'],
   key: ['M15 7a4 4 0 1 1-3.5 5.9L4 20.4V22h2v-2h2v-2h2l2.1-2.1A4 4 0 0 1 15 7z', 'M16 10h.01'],
+  folder: ['M3 6h6l2 2.5h10V20H3z'],
+  layers: ['M12 3 2 8l10 5 10-5z', 'M2 12.5l10 5 10-5', 'M2 17l10 5 10-5'],
 } as const;
 
 /** Le nom d'une icône : 'home', 'server', 'plus'... (TypeScript refuse un nom qui n'existe pas). */

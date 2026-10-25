@@ -17,6 +17,8 @@ let nextId = 0;
  * - label, placeholder, hint (aide sous le champ), error (message en rouge)
  * - type      : 'text' (par défaut), 'number', 'password', 'email'
  * - monospace : police à chasse fixe (pratique pour des adresses)
+ * - rows      : plus de 1 = une zone de texte sur plusieurs lignes (un fichier de configuration, par exemple) ;
+ *               Entrée y passe alors à la ligne au lieu d'émettre `enter`
  * - enter     : l'événement émis quand l'utilisateur appuie sur Entrée
  */
 @Component({
@@ -33,12 +35,13 @@ export class TextFieldComponent {
   readonly error = input<string | null>(null);
   readonly type = input<'text' | 'number' | 'password' | 'email'>('text');
   readonly monospace = input(false);
+  readonly rows = input(1);
   readonly enter = output<void>();
 
   /** Un identifiant unique, pour relier le libellé au champ. */
   protected readonly id = `text-field-${nextId++}`;
 
   protected onInput(event: Event): void {
-    this.value.set((event.target as HTMLInputElement).value);
+    this.value.set((event.target as HTMLInputElement | HTMLTextAreaElement).value);
   }
 }

@@ -18,6 +18,7 @@ import { UserPasswordModalComponent } from '@app/components/user-password-modal/
 import { UserQuotaModalComponent } from '@app/components/user-quota-modal/user-quota-modal.component';
 import { AppError } from '@app/models/app-error.model';
 import { User } from '@app/models/user.model';
+import { UserGroupsModalComponent } from '@app/components/user-groups-modal/user-groups-modal.component';
 import { AdminService } from '@app/services/admin.service';
 import { AuthService } from '@app/services/auth.service';
 import { ModalService } from '@app/services/modal.service';
@@ -111,6 +112,11 @@ export class AdminUsersComponent implements OnInit {
           this.load();
         }
       });
+  }
+
+  /** Les groupes de l'utilisateur, en lecture seule (on les modifie depuis la page Groupes). */
+  protected showGroups(user: User): void {
+    this.modal.open<UserGroupsModalComponent, void>(UserGroupsModalComponent, { inputs: { userId: user.id, username: user.username } });
   }
 
   protected resetPassword(user: User): void {

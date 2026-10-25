@@ -96,6 +96,62 @@ référence : `docs/AUTH.md` et `docs/HANDOFF_FRONT.md` dans son dépôt).
 - [ ] Idées : tests unitaires de `authInterceptor` (refresh partagé, rejeu unique), `SESSION_EXPIRED`
       détecté aussi sur un compte désactivé en cours de session.
 
+### Templates Packer (25 octobre 2026)
+
+Alignement sur `src/templates.rs` de l'API (commit « add templates ») : un template est une image disque
+construite par Packer en arrière-plan, puis copiée pour chaque VM créée à partir de lui.
+
+- [x] Modèles `Template`, `TemplateStatus`, `CreateTemplate`, `CreateVmFromTemplate` ; `TemplateService`
+      (list, get, create → 202, delete, createVm → `Job`).
+- [x] Onglet « Templates » du détail d'un hyperviseur (`template-list`), visible par tous : l'admin voit
+      tout (en attente, en construction, raté), un utilisateur seulement les templates prêts ; sans accès à
+      l'hyperviseur (403), un message l'explique. Rechargement toutes les 5 s pendant une construction.
+- [x] Modales : `template-form-modal` (admin : nom, configuration Packer avec exemple Debian 12, nom du
+      disque lu dans `vm_name`, pool), `template-detail-modal` (admin : configuration et fin de la sortie
+      de Packer), `template-delete-modal`, `template-vm-modal` (nom, vCPU, mémoire, réseau, firmware,
+      démarrage, propriétaire pour un admin ; suivi de la tâche, puis ouverture de la VM).
+- [x] « Créer une VM » (`vm-form-modal`) propose aussi la source « Template » quand l'hyperviseur a un
+      template prêt : disque et ISO disparaissent, la création suit la tâche comme le clonage.
+- [x] `app-text-field` : option `rows` (zone de texte sur plusieurs lignes) ; icône `layers` ; statuts
+      `pending` / `in_progress` / `created` / `failed` dans `app-status-badge`.
+- [x] Erreurs : les 409 / 400 des templates reçoivent un texte français précis (`TEMPLATE_MESSAGES` dans
+      le mapper : nom pris, encore en construction, pas prêt, disque utilisé, réseau inactif…).
+- [x] Fausse API (mode full) : templates d'exemple (un prêt, un raté), construction simulée en ~10 s
+      (« fail » dans la configuration = échec), création de VM en tâche de 3 s.
+- [x] Versions (contrat de l'API du 25 octobre, migration `0003_template_versions`) : `TemplateVersion`,
+      `BuildLog`, `TemplateAccessEntry`, `TemplateVisibility`, statuts `stopping` / `cancelled`. Page
+      `template-detail` (admin) : versions (journal, VM depuis une version, suppression), configuration,
+      accès (`template-access-list` + modale) ; Reconstruire, Arrêter / Forcer l'arrêt, Modifier (le
+      formulaire sert aussi à la modification), Supprimer ; rappel quand la définition a changé depuis la
+      dernière version. `template-log-modal` suit le journal en direct ; `app-code-block` gagne `maxHeight`
+      et `followEnd`. L'ancienne `template-detail-modal` est supprimée.
+- [x] Activer / désactiver un template (`allow_vm_creation`, migration `0004`) : bouton sur la carte et sur
+      la page, choix dans le formulaire, pastille « Désactivé », encadré sur la page. Désactivé : caché aux
+      utilisateurs (onglet Templates et « Créer une VM »), plus de « Créer une VM » pour personne.
+      L'API liste encore un template désactivé : le masquage n'est fait que par l'interface.
+- [x] Droits par template (migration `0006_template_permissions`) : `TemplateAccess`, `TemplatePermission`,
+      `SetPermission` ; onglet « Droits » (utilisateurs **et groupes**, rôle `use` / `manage`, limite de VM)
+      à la place de l'ancien onglet « Accès » ; interface pilotée par `template.access` (gestionnaires : page du
+      template, modification sans la visibilité, journaux, reconstruction ; limite de VM affichée et respectée) ;
+      page `template-detail` sans `adminGuard` ; repli quand `vm-options` répond 403 ; erreur « Template limit
+      reached » traduite.
+- [ ] À signaler côté API : un utilisateur qui n'a qu'un droit sur un template ne voit pas l'hyperviseur
+      (`VISIBLE_HYPERVISORS` ne tient pas compte des droits), donc n'atteint pas l'onglet Templates.
+- [ ] **Non testé** contre une vraie construction Packer (la vraie API du port 3000 n'a reçu que des `GET`).
+
+### Groupes d'utilisateurs (25 octobre 2026)
+
+Alignement sur `src/groups.rs` de l'API (migration `0005_user_groups`).
+
+- [x] Modèles `Group`, `GroupDetail`, `GroupMember`, `GroupRef`, `EffectiveMember`, `UserGroup` ; `GroupService`.
+- [x] Admin : page « Groupes » (liste, recherche, création) et page d'un groupe (membres directs, sous-groupes,
+      tous les membres, groupes parents ; modifier, supprimer) ; modales `group-form-modal`, `group-member-modal`,
+      `group-subgroup-modal` ; bouton « Groupes » sur chaque utilisateur (`user-groups-modal`).
+- [x] Utilisateur : section « Mes groupes » de « Mon compte » (`user-group-list`), direct ou par un groupe imbriqué.
+- [x] Erreurs : nom pris, cycle, groupe dans lui-même, nom / description invalides (`GROUP_MESSAGES`).
+- [x] Fausse API : groupes d'exemple (`etudiants` ⊃ `promo-2026`), cycles refusés, suppression en cascade.
+- [ ] Les groupes ne donnent encore aucun droit côté API : rien à afficher ailleurs pour l'instant.
+
 ### Documentation
 
 - [x] README.md, GUIDE.md (recettes et exercices), CLAUDE.md, ce plan.
@@ -221,3 +277,8 @@ un 409 affiche un message métier clair.
 | 22 octobre 2026 | Branche `infra` (Martageix) : création et suppression de disques et réseaux, clic sur une VM. |
 | 23 octobre 2026 | Branche `auth` : authentification, rôles, prêt de VM, quotas, administration, fausse API, leçon 18. |
 | 24 octobre 2026 | `main` (abdellatif212) fusionné dans `auth` : récapitulatif et filtres des VM, suivi de l'arrêt, modes de disque (nouveau / existant / aucun). Corrigés au passage : polling borné à 1 minute, statut `shutting_down`, nom de VM sans point initial, commentaires pédagogiques restaurés, fausse API en `stopped`. |
+| 25 octobre 2026 | Templates Packer : onglet « Templates », construction (admin), création de VM depuis un template, fausse API. |
+| 25 octobre 2026 | Templates : versions, reconstruction, arrêt, journal en direct, accès restreint (nouveau contrat de l'API). |
+| 25 octobre 2026 | Templates : activation / désactivation (`allow_vm_creation`), masqués aux utilisateurs quand désactivés. |
+| 25 octobre 2026 | Groupes d'utilisateurs : administration (groupes imbriqués), « Mes groupes » dans Mon compte. |
+| 25 octobre 2026 | Droits sur les templates : utilisateurs et groupes, rôles « utiliser » / « gérer », limite de VM. |

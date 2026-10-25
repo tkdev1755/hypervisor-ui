@@ -8,16 +8,17 @@ import { ErrorPanelComponent } from '@app/components/ui/error-panel/error-panel.
 import { LoadingComponent } from '@app/components/ui/loading/loading.component';
 import { StatusBadgeComponent } from '@app/components/ui/status-badge/status-badge.component';
 import { Tab, TabsComponent } from '@app/components/ui/tabs/tabs.component';
+import { TemplateListComponent } from '@app/components/template-list/template-list.component';
 import { VmListComponent } from '@app/components/vm-list/vm-list.component';
 import { AppError, isAppError } from '@app/models/app-error.model';
 import { Hypervisor } from '@app/models/hypervisor.model';
 import { AuthService } from '@app/services/auth.service';
 import { ContextBridgeService } from '@app/services/context-bridge.service';
 
-type Onglet = 'vms' | 'disks' | 'networks' | 'access';
+type Onglet = 'vms' | 'templates' | 'disks' | 'networks' | 'access';
 
 /**
- * Le détail d'un hyperviseur, avec trois onglets.
+ * Le détail d'un hyperviseur, avec ses onglets.
  *
  * `id` vient de l'adresse (/hypervisors/:id) : le routeur le passe directement
  * en input() (grâce à withComponentInputBinding dans app.config.ts).
@@ -33,6 +34,7 @@ type Onglet = 'vms' | 'disks' | 'networks' | 'access';
     LoadingComponent,
     ErrorPanelComponent,
     VmListComponent,
+    TemplateListComponent,
     DiskListComponent,
     NetworkListComponent,
     HypervisorAccessListComponent,
@@ -49,9 +51,13 @@ export class HypervisorDetailComponent implements OnInit {
   protected readonly hypervisor = signal<Hypervisor | null>(null);
   protected readonly error = signal<AppError | null>(null);
 
-  /** Un utilisateur ne voit que ses VM ; disques, réseaux et accès sont réservés aux administrateurs (403 sinon). */
+  /**
+   * Un utilisateur voit ses VM et les templates prêts (s'il a l'accès à l'hyperviseur) ;
+   * disques, réseaux et accès sont réservés aux administrateurs (403 sinon).
+   */
   private readonly tousLesOnglets: (Tab<Onglet> & { adminOnly?: boolean })[] = [
     { id: 'vms', label: 'Machines virtuelles', icon: 'cpu' },
+    { id: 'templates', label: 'Templates', icon: 'layers' },
     { id: 'disks', label: 'Disques', icon: 'disk', adminOnly: true },
     { id: 'networks', label: 'Réseaux', icon: 'network', adminOnly: true },
     { id: 'access', label: 'Accès', icon: 'shield', adminOnly: true },

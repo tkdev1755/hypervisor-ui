@@ -1,0 +1,13 @@
+@if (loading()) {
+  <app-loading label="Chargement des groupes…" />
+} @else if (error(); as error) {
+  <app-error-panel [error]="error" [retryable]="true" (retry)="load()" />
+} @else if (list().length === 0) {
+  <app-empty-state icon="folder" title="Aucun groupe" message="Ce compte ne fait partie d'aucun groupe." />
+} @else {
+  <app-list>
+    @for (group of list(); track group.id) {
+      <app-list-tile icon="folder" [title]="group.name" [subtitle]="subtitle(group)" />
+    }
+  </app-list>
+}

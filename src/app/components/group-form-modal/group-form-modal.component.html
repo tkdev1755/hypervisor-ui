@@ -1,0 +1,19 @@
+<app-modal-shell
+  [title]="editing() ? 'Modifier « ' + group()?.name + ' »' : 'Créer un groupe'"
+  [state]="state()"
+  [error]="error()"
+  loadingLabel="Enregistrement…"
+  [successMessage]="editing() ? 'Groupe modifié.' : 'Groupe créé.'"
+  (retry)="state.set('form')"
+  (done)="modalRef.close(result() ?? undefined)"
+>
+  <app-column [gap]="16">
+    <app-text-field label="Nom" placeholder="promo-2026" [(value)]="name" [error]="nameError()" (enter)="submit()" hint="Unique, sans tenir compte des majuscules." />
+    <app-text-field label="Description (facultative)" placeholder="Les étudiants de la promotion 2026" [rows]="3" [(value)]="description" [error]="descriptionError()" />
+  </app-column>
+
+  <app-row footer [gap]="8">
+    <app-button variant="ghost" (pressed)="modalRef.close()">Annuler</app-button>
+    <app-button (pressed)="submit()">{{ editing() ? 'Enregistrer' : 'Créer' }}</app-button>
+  </app-row>
+</app-modal-shell>
