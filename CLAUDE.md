@@ -67,8 +67,11 @@ npx ng build            # DOIT finir sans erreur NI avertissement
   Utilisez `npm run mock:full` pour tester les actions.
 - **Docker** : `Dockerfile` (étapes `build`, `mock`, `web` = nginx sans root sur 8080), `docker/nginx.conf.template`
   (relaie `/api`, `/ping`, `/swagger-ui`, `/api-docs`, `/mock-novnc` vers `${API_UPSTREAM}` ; index.html pour les
-  routes Angular). `docker-compose.yml` rejoint le réseau de l'API (`hypervisor-api_hypervisor-net`, `api:3000`) ;
+  routes Angular). `docker-compose.yml` : haproxy (HTTPS) → ui (nginx, sans port publié), qui rejoint le réseau de l'API (`hypervisor-api_hypervisor-net`, `api:3000`) ;
   `docker-compose.mock.yml` le remplace par la fausse API (`HOST=0.0.0.0`, `PUBLIC_URL` pour la fausse console).
+  Variables : `.env.example` (à copier en `.env`, ignoré par git).
+  HTTPS : `haproxy/haproxy.cfg` (TLS_CERT_PATH et TLS_KEY_PATH obligatoires, HTTP_PORT, HTTPS_PORT ;
+  vérification de santé sur `/` de nginx en HTTP/1.1 avec Host, sinon nginx répond 400).
   CD : `.github/workflows/cd.yml` publie `remialban/hypervisor-ui` (secrets `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`).
   L'API publie son port sur 127.0.0.1 seulement : passer par son réseau, pas par `host.docker.internal`.
 - Après de gros changements de fichiers (suppression puis recréation de
@@ -108,7 +111,7 @@ src/app/
                           packer-example.ts (exemple Debian 12, lecture de vm_name)
 src/styles/               _tokens.scss (variables), _bootstrap.scss (Bootstrap configuré), _base.scss
 mock-api/server.mjs       fausse API Node sans dépendance
-Dockerfile, docker/, docker-compose*.yml   image nginx du front, fausse API en conteneur
+Dockerfile, docker/, docker-compose*.yml, haproxy/   image nginx du front, fausse API en conteneur, HTTPS
 ```
 
 Alias d'import unique : `@app/*` → `src/app/*` (dans `tsconfig.json`).

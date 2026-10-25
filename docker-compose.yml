@@ -1,12 +1,20 @@
 # =============================================================================
-# Le front Angular dans Docker : http://localhost:8080 (UI_PORT pour changer le port).
+# Le front Angular dans Docker, en HTTPS : haproxy (chiffrement) → nginx (le site, et /api relayé à l'API).
 #
 # Avec la vraie API, lancée par SON docker-compose (dépôt hypervisor-api) — à démarrer d'abord :
-#     docker compose up -d --build
+#     TLS_CERT_PATH=/chemin/fullchain.pem TLS_KEY_PATH=/chemin/privkey.pem docker compose up -d --build
 # Ou sans rien compiler, avec l'image publiée sur Docker Hub (.github/workflows/cd.yml) :
-#     docker compose pull && docker compose up -d
-# Le front rejoint le réseau Docker de l'API (hypervisor-api_hypervisor-net) et nginx
-# lui envoie /api et /ping (http://api:3000, le nom du service de l'API).
+#     docker compose pull && docker compose up -d     (mêmes variables TLS_…)
+# Puis https://<votre-domaine> ; http:// est redirigé vers https://.
+#
+# Variables (dans l'environnement ou dans un fichier .env à côté de ce fichier) :
+#   TLS_CERT_PATH  le certificat en PEM, avec sa chaîne (fullchain.pem chez Let's Encrypt) — obligatoire
+#   TLS_KEY_PATH   la clé privée en PEM (privkey.pem), lisible par l'UID 99
+#                  (l'utilisateur de haproxy dans le conteneur) — obligatoire
+#   HTTP_PORT / HTTPS_PORT  80 et 443 par défaut. Si le haproxy de l'API les occupe déjà sur
+#                  la même machine, prenez-en d'autres (par exemple 8081 et 8443).
+#   TAG            la version de l'image (latest par défaut)
+#   API_NETWORK / API_UPSTREAM  le réseau Docker de l'API et son adresse (voir plus bas)
 #
 # Sans la vraie API, avec la fausse API dans un conteneur à côté :
 #     docker compose -f docker-compose.yml -f docker-compose.mock.yml up -d --build
@@ -15,6 +23,39 @@
 # =============================================================================
 
 services:
+  # Seule porte d'entrée : HTTPS, et HTTP redirigé (configuration : haproxy/haproxy.cfg).
+  haproxy:
+    image: haproxy:3.0-alpine
+    container_name: hypervisor-ui-haproxy
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:8080"
+      - "${HTTPS_PORT:-443}:8443"
+    environment:
+      # Pour la redirection HTTP -> HTTPS.
+      HTTPS_PORT: ${HTTPS_PORT:-443}
+    volumes:
+      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      # create_host_path: false : un chemin qui n'existe pas fait échouer le démarrage, au lieu que
+      # Docker crée un dossier vide à sa place (haproxy n'aurait alors aucun certificat).
+      - type: bind
+        source: ${TLS_CERT_PATH:?TLS_CERT_PATH doit désigner le certificat PEM}
+        target: /usr/local/etc/haproxy/certs/site.pem
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${TLS_KEY_PATH:?TLS_KEY_PATH doit désigner la clé privée PEM}
+        target: /usr/local/etc/haproxy/certs/site.pem.key
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      - ui
+    networks:
+      - edge
+
+  # Le site : nginx sert l'application et relaie /api et /ping à l'API.
   ui:
     build:
       context: .
@@ -22,15 +63,19 @@ services:
     image: remialban/hypervisor-ui:${TAG:-latest}
     container_name: hypervisor-ui
     restart: unless-stopped
-    ports:
-      - "${UI_PORT:-8080}:8080"
+    # Pas de port publié : on ne passe que par haproxy. Décommentez pour un accès HTTP direct en local.
+    # ports:
+    #   - "127.0.0.1:8080:8080"
     environment:
-      # Où nginx envoie /api et /ping, vu depuis le conteneur.
+      # Où nginx envoie /api et /ping, vu depuis le conteneur (api = le nom du service de l'API).
       API_UPSTREAM: ${API_UPSTREAM:-http://api:3000}
     networks:
+      - edge
       - hypervisor-api
 
 networks:
+  # Entre haproxy et le front.
+  edge: {}
   # Le réseau créé par le docker-compose de l'API : il doit déjà exister.
   hypervisor-api:
     name: ${API_NETWORK:-hypervisor-api_hypervisor-net}

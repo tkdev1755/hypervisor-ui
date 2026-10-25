@@ -59,18 +59,33 @@ Puis ouvrir <http://localhost:4200>.
 
 Le `Dockerfile` compile l'application puis la fait servir par nginx, qui joue le
 rôle du proxy : il relaie `/api` et `/ping` vers l'API
-(`docker/nginx.conf.template`).
+(`docker/nginx.conf.template`). Devant lui, **haproxy** sert le site en HTTPS
+avec votre certificat et votre clé privée (fichiers PEM, `haproxy/haproxy.cfg`).
 
 ```bash
 # Avec la vraie API lancée par son docker-compose (à démarrer d'abord) :
+TLS_CERT_PATH=/etc/letsencrypt/live/mon-site/fullchain.pem \
+TLS_KEY_PATH=/etc/letsencrypt/live/mon-site/privkey.pem \
 docker compose up -d --build
-# Sans la vraie API, avec la fausse API dans un second conteneur :
+# Sans la vraie API, avec la fausse API dans un second conteneur (mêmes variables TLS_…) :
 docker compose -f docker-compose.yml -f docker-compose.mock.yml up -d --build
 ```
 
-Puis ouvrir <http://localhost:8080> (`UI_PORT=9000` pour changer le port). Le
-front rejoint le réseau Docker de l'API (`hypervisor-api_hypervisor-net`,
-réglable avec `API_NETWORK`) et lui parle par `http://api:3000` (`API_UPSTREAM`).
+Puis ouvrir `https://<votre-domaine>`.
+
+- `TLS_CERT_PATH` et `TLS_KEY_PATH` sont obligatoires : le plus simple est de
+  copier `.env.example` en `.env` et de l'adapter (docker compose le lit tout seul).
+  Les deux fichiers doivent exister, sinon haproxy refuse de démarrer (« bind source
+  path does not exist »). Pour essayer en local, `.env.example` donne la commande
+  `openssl` qui crée un certificat auto-signé dans `./tls` (ignoré par git). La clé doit être lisible par l'UID 99 (l'utilisateur de
+  haproxy dans le conteneur).
+- `http://` est redirigé vers `https://`. Ports : 80 et 443 par défaut ; si le
+  haproxy de l'API les occupe déjà sur la même machine, choisissez-en d'autres
+  (`HTTP_PORT=8081 HTTPS_PORT=8443`).
+- haproxy limite aussi les tentatives de connexion (20 par 10 s et par adresse)
+  et ajoute l'en-tête HSTS.
+- Le front rejoint le réseau Docker de l'API (`hypervisor-api_hypervisor-net`,
+  réglable avec `API_NETWORK`) et lui parle par `http://api:3000` (`API_UPSTREAM`).
 
 L'image est publiée sur Docker Hub (`remialban/hypervisor-ui`) par
 `.github/workflows/cd.yml` à chaque push sur `main` (tag `latest`) et à chaque
@@ -183,7 +198,7 @@ besoin d'y toucher.
 | `npm start` | Serveur de développement, rechargement automatique |
 | `npm run build` | Build de production dans `dist/` |
 | `npm run mock` / `npm run mock:full` | Fausse API sur le port 3000 |
-| `docker compose up -d --build` | Le front dans Docker sur le port 8080 (voir « Avec Docker ») |
+| `docker compose up -d --build` | Le front dans Docker, en HTTPS derrière haproxy (voir « Avec Docker ») |
 | `npx ng generate component components/mon-composant` | Crée un composant (ses trois fichiers) |
 | `npx ng generate component pages/ma-page` | Crée une page |
 | `npx ng generate service services/mon-service` | Crée un service |

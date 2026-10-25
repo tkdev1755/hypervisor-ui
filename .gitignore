@@ -42,3 +42,8 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Variables de docker compose (voir .env.example)
+.env
+# Certificat et clé privée de haproxy (voir .env.example)
+/tls

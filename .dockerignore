@@ -11,4 +11,7 @@ docs
 npm-debug.log
 Dockerfile
 docker-compose*.yml
+haproxy
 .dockerignore
+.env
+tls
