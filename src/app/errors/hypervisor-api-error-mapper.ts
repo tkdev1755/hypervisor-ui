@@ -106,6 +106,15 @@ const TEMPLATE_MESSAGES: { pattern: RegExp; message: string }[] = [
   { pattern: /^Invalid pool/i, message: 'Le nom du pool est invalide.' },
 ];
 
+/** Même principe pour les groupes (groups.rs). */
+const GROUP_MESSAGES: { pattern: RegExp; message: string }[] = [
+  { pattern: /group with this name already exists/i, message: 'Un groupe porte déjà ce nom (les majuscules ne comptent pas).' },
+  { pattern: /would put the group inside itself/i, message: 'Impossible : ce groupe contient déjà, directement ou non, le groupe dans lequel vous voulez le mettre. Un groupe ne peut pas se retrouver dans lui-même.' },
+  { pattern: /cannot contain itself/i, message: 'Un groupe ne peut pas se contenir lui-même.' },
+  { pattern: /^name must be/i, message: 'Le nom doit faire de 1 à 64 caractères imprimables.' },
+  { pattern: /^description must be/i, message: 'La description fait au plus 500 caractères.' },
+];
+
 /** L'API répond { status, content } en cas d'erreur (voir common.rs). */
 function asApiMessage(body: unknown): ApiMessage | null {
   if (typeof body === 'object' && body !== null && 'status' in body && 'content' in body) {
@@ -158,6 +167,12 @@ export class HypervisorApiErrorMapper implements ErrorMapper {
     }
     if ((code === 'CONFLICT' || code === 'INVALID_REQUEST') && origin.endpoint.includes('/templates')) {
       const found = TEMPLATE_MESSAGES.find((entry) => entry.pattern.test(body?.content ?? ''));
+      if (found) {
+        return found.message;
+      }
+    }
+    if ((code === 'CONFLICT' || code === 'INVALID_REQUEST') && origin.endpoint.startsWith('/api/groups')) {
+      const found = GROUP_MESSAGES.find((entry) => entry.pattern.test(body?.content ?? ''));
       if (found) {
         return found.message;
       }

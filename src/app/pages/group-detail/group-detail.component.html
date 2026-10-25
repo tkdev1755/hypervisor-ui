@@ -1,0 +1,110 @@
+@if (group(); as group) {
+  <app-page backLink="/admin/groups" backLabel="Groupes" eyebrow="Groupe" [title]="group.name" [subtitle]="group.description || 'Sans description'">
+    <app-button actions variant="ghost" icon="edit" (pressed)="edit(group)">Modifier</app-button>
+    <app-button actions variant="danger-ghost" icon="trash" (pressed)="remove(group)">Supprimer</app-button>
+
+    <app-grid [minItemWidth]="200">
+      <app-card>
+        <app-column [gap]="4">
+          <app-text variant="eyebrow">Membres directs</app-text>
+          <app-text variant="title">{{ group.members.length }}</app-text>
+        </app-column>
+      </app-card>
+      <app-card>
+        <app-column [gap]="4">
+          <app-text variant="eyebrow">Tous les membres</app-text>
+          <app-text variant="title">{{ everyone().length }}</app-text>
+        </app-column>
+      </app-card>
+      <app-card>
+        <app-column [gap]="4">
+          <app-text variant="eyebrow">Créé le</app-text>
+          <app-text variant="title">{{ date(group.created_at) }}</app-text>
+        </app-column>
+      </app-card>
+    </app-grid>
+
+    @if (actionError(); as actionError) {
+      <app-error-panel [error]="actionError" />
+    }
+
+    <app-tabs [tabs]="onglets()" [(active)]="onglet" />
+
+    @switch (onglet()) {
+      @case ('members') {
+        <app-column [gap]="12">
+          <app-row [gap]="8">
+            <app-text color="muted">Les utilisateurs directement dans ce groupe</app-text>
+            <app-spacer />
+            <app-button size="sm" icon="plus" (pressed)="addMember(group)">Ajouter un membre</app-button>
+          </app-row>
+          @if (group.members.length === 0) {
+            <app-empty-state icon="user" title="Aucun membre direct" message="Ajoutez des utilisateurs, ou des sous-groupes." />
+          } @else {
+            <app-list>
+              @for (member of group.members; track member.user_id) {
+                <app-list-tile icon="user" [title]="member.username" [subtitle]="'Ajouté le ' + date(member.added_at)">
+                  <app-button variant="danger-ghost" size="sm" icon="trash" (pressed)="removeMember(group, member)">Retirer</app-button>
+                </app-list-tile>
+              }
+            </app-list>
+          }
+        </app-column>
+      }
+      @case ('subgroups') {
+        <app-column [gap]="12">
+          <app-row [gap]="8">
+            <app-text color="muted">Les groupes dans ce groupe : leurs membres en font aussi partie</app-text>
+            <app-spacer />
+            <app-button size="sm" icon="plus" (pressed)="addSubgroup(group)">Ajouter un sous-groupe</app-button>
+          </app-row>
+          @if (group.subgroups.length === 0) {
+            <app-empty-state icon="folder" title="Aucun sous-groupe" />
+          } @else {
+            <app-list>
+              @for (subgroup of group.subgroups; track subgroup.id) {
+                <app-list-tile icon="folder" [title]="subgroup.name" [subtitle]="'Ajouté le ' + date(subgroup.added_at)" [clickable]="true" (tap)="open(subgroup)">
+                  <app-button variant="danger-ghost" size="sm" icon="trash" (pressed)="removeSubgroup(group, subgroup)">Retirer</app-button>
+                </app-list-tile>
+              }
+            </app-list>
+          }
+        </app-column>
+      }
+      @case ('all') {
+        <app-column [gap]="12">
+          <app-text color="muted">Les utilisateurs de ce groupe et de tous ses sous-groupes (lecture seule).</app-text>
+          @if (everyone().length === 0) {
+            <app-empty-state icon="users" title="Personne" message="Ni ce groupe ni ses sous-groupes n'ont de membre." />
+          } @else {
+            <app-list>
+              @for (member of everyone(); track member.user_id) {
+                <app-list-tile icon="user" [title]="member.username" [subtitle]="member.direct ? 'Membre direct' : 'Par un sous-groupe'" />
+              }
+            </app-list>
+          }
+        </app-column>
+      }
+      @case ('parents') {
+        <app-column [gap]="12">
+          <app-text color="muted">Les groupes qui contiennent directement ce groupe. Pour l'en retirer, ouvrez le groupe parent.</app-text>
+          @if (group.parents.length === 0) {
+            <app-empty-state icon="layers" title="Aucun groupe parent" message="Ce groupe n'est dans aucun autre groupe." />
+          } @else {
+            <app-list>
+              @for (parent of group.parents; track parent.id) {
+                <app-list-tile icon="folder" [title]="parent.name" [subtitle]="'Depuis le ' + date(parent.added_at)" [clickable]="true" (tap)="open(parent)" />
+              }
+            </app-list>
+          }
+        </app-column>
+      }
+    }
+  </app-page>
+} @else if (error(); as error) {
+  <app-page backLink="/admin/groups" backLabel="Groupes" title="Groupe">
+    <app-error-panel [error]="error" [retryable]="true" (retry)="load()" />
+  </app-page>
+} @else {
+  <app-loading label="Chargement du groupe…" />
+}

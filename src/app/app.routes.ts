@@ -68,6 +68,19 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/admin-users/admin-users.component').then((m) => m.AdminUsersComponent),
       },
       {
+        path: 'admin/groups',
+        title: 'Groupes · Hypervisor',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./pages/admin-groups/admin-groups.component').then((m) => m.AdminGroupsComponent),
+      },
+      {
+        // :groupId devient l'input() `groupId` de la page.
+        path: 'admin/groups/:groupId',
+        title: 'Groupe · Hypervisor',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./pages/group-detail/group-detail.component').then((m) => m.GroupDetailComponent),
+      },
+      {
         path: 'admin/audit',
         title: "Journal d'audit · Hypervisor",
         canActivate: [adminGuard],

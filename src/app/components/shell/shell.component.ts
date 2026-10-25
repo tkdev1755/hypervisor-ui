@@ -38,6 +38,7 @@ export class ShellComponent implements OnInit {
     { label: 'Apprendre', icon: 'learn', link: '/learn', exact: false },
     { label: 'Hyperviseurs', icon: 'server', link: '/hypervisors', exact: false },
     { label: 'Utilisateurs', icon: 'users', link: '/admin/users', exact: false, adminOnly: true },
+    { label: 'Groupes', icon: 'folder', link: '/admin/groups', exact: false, adminOnly: true },
     { label: "Journal d'audit", icon: 'list', link: '/admin/audit', exact: false, adminOnly: true },
   ];
   /** Les liens visibles pour l'utilisateur connecté. */

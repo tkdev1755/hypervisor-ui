@@ -1,0 +1,7 @@
+<app-modal-shell [title]="'Groupes de ' + username()" subtitle="Pour ajouter ou retirer ce compte, ouvrez le groupe depuis la page Groupes.">
+  <app-user-group-list [userId]="userId()" />
+
+  <app-row footer [gap]="8">
+    <app-button variant="ghost" (pressed)="modalRef.close()">Fermer</app-button>
+  </app-row>
+</app-modal-shell>

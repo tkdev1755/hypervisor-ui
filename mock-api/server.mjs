@@ -17,6 +17,9 @@
 // que l'API Rust. Les données sont en mémoire : elles disparaissent à l'arrêt.
 // Aucune dépendance : seulement le module http de Node.
 //
+// GROUPES (comme groups.rs) : « etudiants » contient alice et le sous-groupe « promo-2026 » (bob) ;
+//   « enseignants » est vide. Seuls les admins voient /api/groups ; chacun voit les siens (/api/me/groups).
+//
 // AUTHENTIFICATION (comme la vraie API : voir docs/AUTH.md dans son dépôt)
 //   Comptes d'exemple (le mot de passe est le nom, ou « admin-password » pour l'admin) :
 //       admin / admin-password   administrateur
@@ -53,6 +56,7 @@ const refreshTokens = new Map(); // refresh token -> { userId, expires }
 const failures = new Map(); // nom d'utilisateur -> nombre d'échecs
 const settings = { registration_open: false };
 const audit = []; // le plus récent en premier
+const groups = new Map(); // groupId -> { id, name, description, created_at, updated_at, members: Map(userId -> date), subgroups: Map(childId -> date) }
 
 const NO_QUOTA = () => ({ max_vms: null, max_vcpus: null, max_memory_mb: null, max_disk_gb: null });
 
@@ -113,6 +117,17 @@ function addTemplate(hypervisorId, name, visibility, versionStates, allowVmCreat
 addTemplate(local.id, 'debian-12', 'hypervisor', ['created', 'created']);
 addTemplate(local.id, 'ubuntu-24', 'restricted', ['created', 'failed']).access.set(alice.id, now());
 addTemplate(local.id, 'alpine-3', 'hypervisor', ['created'], false);
+function addGroup(name, description) {
+  const group = { id: randomUUID(), name, description, created_at: now(), updated_at: now(), members: new Map(), subgroups: new Map() };
+  groups.set(group.id, group);
+  return group;
+}
+const etudiants = addGroup('etudiants', 'Tous les étudiants');
+const promo = addGroup('promo-2026', 'La promotion 2026');
+addGroup('enseignants', '');
+etudiants.members.set(alice.id, now());
+promo.members.set(bob.id, now());
+etudiants.subgroups.set(promo.id, now());
 bobVm.shares.push({ user_id: alice.id, username: 'alice', created_at: now(), expires_at: null });
 
 // --- Réponses ---------------------------------------------------------------
@@ -262,6 +277,13 @@ const server = createServer(async (req, res) => {
     }
   }
 
+  // GET /api/me/groups : chacun voit ses groupes (lecture seule).
+  if (parts[1] === 'me' && parts[2] === 'groups' && method === 'GET') return send(res, 200, groupsOf(user.id));
+  if (parts[1] === 'groups') {
+    if (adminOnly()) return;
+    return handleGroups(req, res, parts, method, user);
+  }
+
   // /api/users...
   if (parts[1] === 'users') {
     if (adminOnly()) return;
@@ -366,6 +388,7 @@ async function handleUsers(req, res, parts, method, actor) {
   }
   const target = users.get(id);
   if (!target) return err(res, 404, 'User not found');
+  if (sub === 'groups' && method === 'GET') return send(res, 200, groupsOf(target.id));
   const activeAdmins = () => [...users.values()].filter((user) => user.role === 'admin' && !user.disabled);
   const isLastAdmin = target.role === 'admin' && !target.disabled && activeAdmins().length === 1;
 
@@ -385,6 +408,7 @@ async function handleUsers(req, res, parts, method, actor) {
       if (isLastAdmin) return err(res, 409, 'The last active administrator cannot be removed');
       if ([...vms.values()].flat().some((vm) => vm.owner_id === target.id)) return err(res, 409, 'This user still owns VMs');
       users.delete(target.id);
+      for (const group of groups.values()) group.members.delete(target.id); // comme ON DELETE CASCADE
       logAudit(actor, 'user.delete', target.username);
       return send(res, 204);
     }
@@ -410,6 +434,131 @@ async function handleUsers(req, res, parts, method, actor) {
     target.quota = quota;
     logAudit(actor, 'user.quota', target.id, JSON.stringify(quota));
     return send(res, 200, userView(target));
+  }
+  return err(res, 404, 'Route not found');
+}
+
+// --- /api/groups/* (comme groups.rs) -------------------------------------------------
+/** Le groupe et tous ceux qu'il contient, à n'importe quelle profondeur (ids). */
+function subtree(groupId) {
+  const seen = new Set([groupId]);
+  const queue = [groupId];
+  while (queue.length) {
+    for (const child of groups.get(queue.shift())?.subgroups.keys() ?? []) {
+      if (!seen.has(child)) {
+        seen.add(child);
+        queue.push(child);
+      }
+    }
+  }
+  return seen;
+}
+/** Les groupes d'un utilisateur : ceux où il est, puis ceux qui les contiennent, etc. (`direct` s'il y est lui-même). */
+function groupsOf(userId) {
+  return [...groups.values()]
+    .map((group) => {
+      const inside = [...subtree(group.id)].some((id) => groups.get(id)?.members.has(userId));
+      return inside ? { id: group.id, name: group.name, description: group.description, direct: group.members.has(userId) } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+function groupView(group) {
+  const { members, subgroups, ...rest } = group;
+  return { ...rest, member_count: members.size, subgroup_count: subgroups.size };
+}
+const groupRefs = (entries) => [...entries].map(([id, added_at]) => ({ id, name: groups.get(id)?.name, added_at })).sort((a, b) => a.name.localeCompare(b.name));
+/** Vérifie nom et description ; renvoie le message d'erreur de l'API, ou null. */
+function groupProblem(body) {
+  const name = String(body.name ?? '').trim();
+  if (!name || name.length > 64) return 'name must be 1 to 64 printable characters';
+  if (String(body.description ?? '').trim().length > 500) return 'description must be at most 500 printable characters';
+  return null;
+}
+const nameTaken = (name, exceptId) => [...groups.values()].some((g) => g.id !== exceptId && g.name.toLowerCase() === name.trim().toLowerCase());
+
+async function handleGroups(req, res, parts, method, user) {
+  const [, , id, sub, subId] = parts;
+  if (!id) {
+    if (method === 'GET') return send(res, 200, [...groups.values()].sort((a, b) => a.name.localeCompare(b.name)).map(groupView));
+    if (method === 'POST') {
+      const body = await readJson(req);
+      if (!body) return malformed(res);
+      const problem = groupProblem(body);
+      if (problem) return err(res, 400, problem);
+      if (nameTaken(body.name)) return err(res, 409, 'A group with this name already exists');
+      const group = addGroup(body.name.trim(), String(body.description ?? '').trim());
+      logAudit(user, 'group.create', group.id, group.name);
+      return send(res, 201, groupView(group));
+    }
+  }
+  const group = groups.get(id);
+  if (!group) return err(res, 404, 'Group not found');
+
+  if (!sub) {
+    if (method === 'GET') {
+      const parents = [...groups.values()].filter((g) => g.subgroups.has(group.id)).map((g) => [g.id, g.subgroups.get(group.id)]);
+      const members = [...group.members].map(([userId, added_at]) => ({ user_id: userId, username: users.get(userId)?.username, added_at }));
+      const { members: _m, subgroups: _s, ...rest } = group;
+      return send(res, 200, { ...rest, members: members.sort((a, b) => a.username.localeCompare(b.username)), subgroups: groupRefs(group.subgroups), parents: groupRefs(parents) });
+    }
+    if (method === 'PATCH') {
+      const body = await readJson(req);
+      if (!body) return malformed(res);
+      const next = { name: body.name ?? group.name, description: body.description ?? group.description };
+      const problem = groupProblem(next);
+      if (problem) return err(res, 400, problem);
+      if (nameTaken(next.name, group.id)) return err(res, 409, 'A group with this name already exists');
+      Object.assign(group, { name: next.name.trim(), description: String(next.description).trim(), updated_at: now() });
+      logAudit(user, 'group.update', group.id, group.name);
+      return send(res, 200, groupView(group));
+    }
+    if (method === 'DELETE') {
+      groups.delete(group.id);
+      for (const other of groups.values()) other.subgroups.delete(group.id); // comme ON DELETE CASCADE
+      logAudit(user, 'group.delete', group.id, group.name);
+      return send(res, 204);
+    }
+  }
+  if (sub === 'members' && !subId && method === 'GET') {
+    const everyone = new Map();
+    for (const gid of subtree(group.id)) {
+      for (const userId of groups.get(gid).members.keys()) {
+        everyone.set(userId, everyone.get(userId) || gid === group.id);
+      }
+    }
+    const list = [...everyone].map(([userId, direct]) => ({ user_id: userId, username: users.get(userId)?.username, direct }));
+    return send(res, 200, list.sort((a, b) => a.username.localeCompare(b.username)));
+  }
+  if (sub === 'members' && subId) {
+    if (method === 'PUT') {
+      const member = users.get(subId);
+      if (!member) return err(res, 404, 'User not found');
+      if (!group.members.has(subId)) group.members.set(subId, now());
+      logAudit(user, 'group.add_member', group.id, member.username);
+      return send(res, 204);
+    }
+    if (method === 'DELETE') {
+      if (!group.members.delete(subId)) return err(res, 404, 'The user is not in this group');
+      logAudit(user, 'group.remove_member', group.id, subId);
+      return send(res, 204);
+    }
+  }
+  if (sub === 'subgroups' && subId) {
+    if (method === 'PUT') {
+      const child = groups.get(subId);
+      if (!child) return err(res, 404, 'Group not found');
+      if (child.id === group.id) return err(res, 400, 'A group cannot contain itself');
+      if (subtree(child.id).has(group.id)) return err(res, 409, `${group.name} is already inside ${child.name}: adding it would put the group inside itself`);
+      if (!group.subgroups.has(child.id)) group.subgroups.set(child.id, now());
+      logAudit(user, 'group.add_subgroup', group.id, child.name);
+      return send(res, 204);
+    }
+    if (method === 'DELETE') {
+      if (!group.subgroups.delete(subId)) return err(res, 404, 'This group is not a subgroup of the group');
+      logAudit(user, 'group.remove_subgroup', group.id, subId);
+      return send(res, 204);
+    }
   }
   return err(res, 404, 'Route not found');
 }

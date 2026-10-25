@@ -131,6 +131,19 @@ construite par Packer en arrière-plan, puis copiée pour chaque VM créée à p
       L'API liste encore un template désactivé : le masquage n'est fait que par l'interface.
 - [ ] **Non testé** contre une vraie construction Packer (la vraie API du port 3000 n'a reçu que des `GET`).
 
+### Groupes d'utilisateurs (25 octobre 2026)
+
+Alignement sur `src/groups.rs` de l'API (migration `0005_user_groups`).
+
+- [x] Modèles `Group`, `GroupDetail`, `GroupMember`, `GroupRef`, `EffectiveMember`, `UserGroup` ; `GroupService`.
+- [x] Admin : page « Groupes » (liste, recherche, création) et page d'un groupe (membres directs, sous-groupes,
+      tous les membres, groupes parents ; modifier, supprimer) ; modales `group-form-modal`, `group-member-modal`,
+      `group-subgroup-modal` ; bouton « Groupes » sur chaque utilisateur (`user-groups-modal`).
+- [x] Utilisateur : section « Mes groupes » de « Mon compte » (`user-group-list`), direct ou par un groupe imbriqué.
+- [x] Erreurs : nom pris, cycle, groupe dans lui-même, nom / description invalides (`GROUP_MESSAGES`).
+- [x] Fausse API : groupes d'exemple (`etudiants` ⊃ `promo-2026`), cycles refusés, suppression en cascade.
+- [ ] Les groupes ne donnent encore aucun droit côté API : rien à afficher ailleurs pour l'instant.
+
 ### Documentation
 
 - [x] README.md, GUIDE.md (recettes et exercices), CLAUDE.md, ce plan.
@@ -259,3 +272,4 @@ un 409 affiche un message métier clair.
 | 25 octobre 2026 | Templates Packer : onglet « Templates », construction (admin), création de VM depuis un template, fausse API. |
 | 25 octobre 2026 | Templates : versions, reconstruction, arrêt, journal en direct, accès restreint (nouveau contrat de l'API). |
 | 25 octobre 2026 | Templates : activation / désactivation (`allow_vm_creation`), masqués aux utilisateurs quand désactivés. |
+| 25 octobre 2026 | Groupes d'utilisateurs : administration (groupes imbriqués), « Mes groupes » dans Mon compte. |

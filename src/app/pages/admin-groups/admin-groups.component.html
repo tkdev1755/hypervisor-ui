@@ -1,0 +1,30 @@
+<app-page eyebrow="Administration" title="Groupes" subtitle="Des groupes d'utilisateurs, qui peuvent contenir d'autres groupes. Chaque utilisateur voit les siens dans « Mon compte ».">
+  <app-button actions variant="ghost" icon="refresh" [disabled]="loading()" (pressed)="load()">Actualiser</app-button>
+  <app-button actions icon="plus" (pressed)="create()">Créer un groupe</app-button>
+
+  <app-callout title="Groupes imbriqués">
+    Un groupe peut contenir des utilisateurs et d'autres groupes : les membres d'un sous-groupe font aussi partie du groupe parent.
+    Un utilisateur ou un groupe peut être dans plusieurs groupes, mais un groupe ne peut jamais se retrouver dans lui-même.
+  </app-callout>
+
+  @if (loading()) {
+    <app-loading label="Chargement des groupes…" />
+  } @else if (error(); as error) {
+    <app-error-panel [error]="error" [retryable]="true" (retry)="load()" />
+  } @else if (list().length === 0) {
+    <app-empty-state icon="folder" title="Aucun groupe" message="Créez un groupe pour rassembler des utilisateurs.">
+      <app-button icon="plus" (pressed)="create()">Créer un groupe</app-button>
+    </app-empty-state>
+  } @else {
+    <app-text-field placeholder="Rechercher un groupe…" [(value)]="search" />
+    <app-list>
+      @for (group of filtered(); track group.id) {
+        <app-list-tile icon="folder" [title]="group.name" [subtitle]="describe(group)" [clickable]="true" (tap)="open(group)">
+          <app-button variant="ghost" size="sm" icon="edit" (pressed)="open(group)">Ouvrir</app-button>
+        </app-list-tile>
+      } @empty {
+        <app-empty-state icon="folder" title="Aucun résultat" message="Aucun groupe ne correspond à cette recherche." />
+      }
+    </app-list>
+  }
+</app-page>

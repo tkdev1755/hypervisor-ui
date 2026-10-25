@@ -75,7 +75,7 @@ npx ng build            # DOIT finir sans erreur NI avertissement
 src/app/
 ├── app.component.*, app.config.ts, app.routes.ts
 ├── pages/                home, login, account, learn, hypervisor-list, hypervisor-detail, vm-detail, template-detail,
-│                         admin-users, admin-audit, not-found
+│                         admin-users, admin-groups, group-detail, admin-audit, not-found
 ├── components/
 │   ├── layout/           column, row, padding, sized-box, center, expanded, spacer, grid, card, divider, page
 │   ├── ui/               text, inline-code, button, icon (+ icons.ts), status-badge, text-field, choice-cards,
@@ -88,8 +88,9 @@ src/app/
 │       template-list, template-form-modal, template-delete-modal, template-vm-modal, template-log-modal,
 │       template-access-list + template-access-modal,
 │       hypervisor-access-list + hypervisor-access-modal, user-picker,
-│       user-form-modal, user-quota-modal, user-password-modal, password-form-modal   (composants métier)
-├── services/             auth (session, jetons), hypervisor, vm, template, share (prêts), user, admin (réglages, audit, accès),
+│       user-form-modal, user-quota-modal, user-password-modal, password-form-modal,
+│       group-form-modal, group-member-modal, group-subgroup-modal, user-group-list, user-groups-modal   (composants métier)
+├── services/             auth (session, jetons), hypervisor, vm, template, group, share (prêts), user, admin (réglages, audit, accès),
 │                         job, inventory (arbre de la barre latérale), infrastructure (API), modal (+ modal-ref), context-bridge
 ├── models/               types recopiés de src/models.rs de l'API, et app-error.model.ts
 ├── interceptors/         auth.interceptor.ts (jeton + refresh), error.interceptor.ts
@@ -207,6 +208,12 @@ mainteneur a conçue en entreprise. Respectez leur contrat.
   (`template-list` → `visible()`, filtre de `vm-form-modal`). L'admin le voit avec la pastille « Désactivé ». Les 409 ont des causes variées :
   leur texte français vient de `TEMPLATE_MESSAGES` dans le mapper. Ne lancez **aucune** construction sur la
   vraie API sans accord (elle installe un OS sur l'hyperviseur) : `npm run mock:full` la simule.
+- **Groupes** (`groups.rs` de l'API) : des groupes d'utilisateurs qui contiennent aussi des groupes (sans cycle :
+  l'API répond 409, texte français dans `GROUP_MESSAGES` du mapper). Ils ne donnent encore aucun droit.
+  Admin seulement : pages `/admin/groups` et `/admin/groups/:groupId` (`adminGuard`, lien « Groupes » de la barre
+  latérale), bouton « Groupes » par utilisateur (`user-groups-modal`). Chacun voit ses groupes, en lecture seule,
+  dans « Mon compte » (`user-group-list`, `GET /api/me/groups`). `group-detail` recharge via un `effect()` car
+  ouvrir un sous-groupe ou un parent ne change que `groupId` (même composant).
 - La suppression de réseau est **masquée** (la vraie API n'a pas de `DELETE …/networks/{id}`) :
   `NetworkDeleteModalComponent` et `deleteNetwork` existent, à rebrancher quand la route existera.
 
