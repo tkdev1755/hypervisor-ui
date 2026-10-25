@@ -1,0 +1,14 @@
+# Ce que Docker n'envoie pas au build (plus rapide, et pas de node_modules de la machine).
+node_modules
+dist
+.angular
+.git
+.vscode
+.idea
+docs
+*.md
+!README.md
+npm-debug.log
+Dockerfile
+docker-compose*.yml
+.dockerignore

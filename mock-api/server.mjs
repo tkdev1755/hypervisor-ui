@@ -38,6 +38,10 @@ import { createServer } from 'node:http';
 import { randomUUID } from 'node:crypto';
 
 const PORT = Number(process.env.PORT ?? 3000);
+// HOST=0.0.0.0 dans Docker (sinon le conteneur du front ne peut pas la joindre).
+const HOST = process.env.HOST ?? '127.0.0.1';
+// L'adresse vue par le navigateur pour la fausse console (dans Docker : celle du front, qui relaie /mock-novnc).
+const PUBLIC_URL = process.env.PUBLIC_URL ?? `http://127.0.0.1:${PORT}`;
 const FULL = process.env.MOCK_FULL === '1';
 const ACCESS_TTL = Number(process.env.ACCESS_TTL ?? 900); // secondes
 const MAX_FAILURES = 5;
@@ -715,7 +719,7 @@ async function handleVms(req, res, { id, resource, subId, action, extra, method,
     // Un jeton à durée courte, comme l'API : l'adresse expire au bout de 2 minutes.
     return send(res, 200, {
       hypervisor_id: id, vm_id: vm.id, uuid: vm.id, host: '127.0.0.1', port: '5900', token: `vnc_${randomUUID()}`, status: 'connected',
-      novnc_url: `http://127.0.0.1:${PORT}/mock-novnc?token=${vm.name}`, expires_at: now() + 120,
+      novnc_url: `${PUBLIC_URL}/mock-novnc?token=${vm.name}`, expires_at: now() + 120,
     });
   }
   if (method === 'GET' && !action) return send(res, 200, vmView(vm, user));
@@ -1117,8 +1121,8 @@ async function handleInfrastructure(req, res, { id, resource, subId, method }) {
   return err(res, 404, 'Route not found');
 }
 
-server.listen(PORT, '127.0.0.1', () => {
-  console.log(`Fausse hypervisor-api sur http://127.0.0.1:${PORT} (mode ${FULL ? 'complet' : 'fidèle à l’API actuelle'})`);
+server.listen(PORT, HOST, () => {
+  console.log(`Fausse hypervisor-api sur http://${HOST}:${PORT} (mode ${FULL ? 'complet' : 'fidèle à l’API actuelle'})`);
   console.log('Comptes : admin / admin-password, alice / alice, bob / bob (voir l’en-tête du fichier).');
   console.log(`Jeton d'accès valable ${ACCESS_TTL} s (ACCESS_TTL=20 pour tester le refresh). Une URI contenant « fail » simule un hôte injoignable (502).`);
 });

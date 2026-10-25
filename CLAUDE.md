@@ -65,6 +65,12 @@ npx ng build            # DOIT finir sans erreur NI avertissement
   mainteneur, branchée sur de **vrais hyperviseurs** : ne déclenchez aucune
   création, suppression, démarrage ou arrêt de VM dessus sans son accord.
   Utilisez `npm run mock:full` pour tester les actions.
+- **Docker** : `Dockerfile` (étapes `build`, `mock`, `web` = nginx sans root sur 8080), `docker/nginx.conf.template`
+  (relaie `/api`, `/ping`, `/swagger-ui`, `/api-docs`, `/mock-novnc` vers `${API_UPSTREAM}` ; index.html pour les
+  routes Angular). `docker-compose.yml` rejoint le réseau de l'API (`hypervisor-api_hypervisor-net`, `api:3000`) ;
+  `docker-compose.mock.yml` le remplace par la fausse API (`HOST=0.0.0.0`, `PUBLIC_URL` pour la fausse console).
+  CD : `.github/workflows/cd.yml` publie `remialban/hypervisor-ui` (secrets `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`).
+  L'API publie son port sur 127.0.0.1 seulement : passer par son réseau, pas par `host.docker.internal`.
 - Après de gros changements de fichiers (suppression puis recréation de
   dossiers), le serveur `ng serve` peut rester bloqué sur une erreur de
   résolution : redémarrez-le.
@@ -102,6 +108,7 @@ src/app/
                           packer-example.ts (exemple Debian 12, lecture de vm_name)
 src/styles/               _tokens.scss (variables), _bootstrap.scss (Bootstrap configuré), _base.scss
 mock-api/server.mjs       fausse API Node sans dépendance
+Dockerfile, docker/, docker-compose*.yml   image nginx du front, fausse API en conteneur
 ```
 
 Alias d'import unique : `@app/*` → `src/app/*` (dans `tsconfig.json`).

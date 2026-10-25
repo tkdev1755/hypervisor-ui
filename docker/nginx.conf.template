@@ -1,0 +1,53 @@
+# Configuration nginx du front (modèle : ${API_UPSTREAM} est remplacé au démarrage du conteneur).
+#
+#   /api/…, /ping, /swagger-ui, /api-docs/…  → l'API (comme proxy.conf.json avec ng serve)
+#   /mock-novnc                               → la fausse console de la fausse API (404 sur la vraie)
+#   tout le reste                             → l'application Angular (index.html pour ses routes)
+
+server {
+    listen 8080;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Une configuration Packer peut être longue.
+    client_max_body_size 10m;
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy no-referrer always;
+
+    # ---------- l'API ----------
+    location ~ ^/(api/|ping$|swagger-ui|api-docs/|mock-novnc) {
+        proxy_pass ${API_UPSTREAM};
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # Certaines opérations libvirt (hyperviseur distant par SSH) prennent du temps.
+        proxy_read_timeout 120s;
+    }
+
+    # ---------- l'application ----------
+    # Les fichiers compilés ont un nom qui change à chaque version (main-ABC123.js) :
+    # le navigateur peut les garder longtemps.
+    location ~* \.(js|css|woff2?|ttf|svg|png|jpg|ico)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        # Un add_header ici remplace ceux du bloc server : on les répète.
+        add_header X-Content-Type-Options nosniff always;
+        add_header Referrer-Policy no-referrer always;
+        try_files $uri =404;
+    }
+
+    # Les routes d'Angular (/hypervisors/…, /admin/…) n'existent pas en fichiers : on renvoie
+    # index.html, et le routeur Angular affiche la bonne page. Jamais mis en cache, pour
+    # recevoir tout de suite une nouvelle version.
+    location / {
+        add_header Cache-Control "no-cache";
+        add_header X-Content-Type-Options nosniff always;
+        add_header Referrer-Policy no-referrer always;
+        try_files $uri $uri/ /index.html;
+    }
+}

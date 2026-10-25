@@ -1,0 +1,37 @@
+# =============================================================================
+# Le front Angular dans Docker : http://localhost:8080 (UI_PORT pour changer le port).
+#
+# Avec la vraie API, lancée par SON docker-compose (dépôt hypervisor-api) — à démarrer d'abord :
+#     docker compose up -d --build
+# Ou sans rien compiler, avec l'image publiée sur Docker Hub (.github/workflows/cd.yml) :
+#     docker compose pull && docker compose up -d
+# Le front rejoint le réseau Docker de l'API (hypervisor-api_hypervisor-net) et nginx
+# lui envoie /api et /ping (http://api:3000, le nom du service de l'API).
+#
+# Sans la vraie API, avec la fausse API dans un conteneur à côté :
+#     docker compose -f docker-compose.yml -f docker-compose.mock.yml up -d --build
+#
+# Arrêter : docker compose down   (ajouter les mêmes -f pour la fausse API)
+# =============================================================================
+
+services:
+  ui:
+    build:
+      context: .
+      target: web
+    image: remialban/hypervisor-ui:${TAG:-latest}
+    container_name: hypervisor-ui
+    restart: unless-stopped
+    ports:
+      - "${UI_PORT:-8080}:8080"
+    environment:
+      # Où nginx envoie /api et /ping, vu depuis le conteneur.
+      API_UPSTREAM: ${API_UPSTREAM:-http://api:3000}
+    networks:
+      - hypervisor-api
+
+networks:
+  # Le réseau créé par le docker-compose de l'API : il doit déjà exister.
+  hypervisor-api:
+    name: ${API_NETWORK:-hypervisor-api_hypervisor-net}
+    external: true

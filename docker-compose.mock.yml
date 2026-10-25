@@ -1,0 +1,34 @@
+# =============================================================================
+# Variante sans la vraie API : la fausse API (mock-api/server.mjs) dans un conteneur.
+#     docker compose -f docker-compose.yml -f docker-compose.mock.yml up -d --build
+# Puis http://localhost:8080 : admin / admin-password, alice / alice, bob / bob.
+# MOCK_FULL=0 pour la version « fidèle à l'API » (VM, disques et réseaux en 501).
+# =============================================================================
+
+services:
+  ui:
+    environment:
+      API_UPSTREAM: http://mock:3000
+    # !override remplace la liste de docker-compose.yml : pas besoin du réseau de l'API.
+    networks: !override
+      - default
+    depends_on:
+      - mock
+
+  mock:
+    build:
+      context: .
+      target: mock
+    image: hypervisor-ui-mock:latest
+    container_name: hypervisor-ui-mock
+    restart: unless-stopped
+    environment:
+      MOCK_FULL: ${MOCK_FULL:-1}
+      # La fausse console s'ouvre dans le navigateur : par le front, qui relaie /mock-novnc.
+      PUBLIC_URL: http://localhost:${UI_PORT:-8080}
+    # Pas de port publié : seul le front la joint. Décommentez pour l'appeler avec curl ou Bruno.
+    # ports:
+    #   - "127.0.0.1:3001:3000"
+
+networks: !override
+  default: {}

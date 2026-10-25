@@ -55,6 +55,29 @@ Puis ouvrir <http://localhost:4200>.
 > `proxy.conf.json` fait passer `/api` et `/ping` par le serveur Angular. Dans
 > le code, on écrit donc simplement `this.http.get('/api/hypervisors')`.
 
+### Avec Docker
+
+Le `Dockerfile` compile l'application puis la fait servir par nginx, qui joue le
+rôle du proxy : il relaie `/api` et `/ping` vers l'API
+(`docker/nginx.conf.template`).
+
+```bash
+# Avec la vraie API lancée par son docker-compose (à démarrer d'abord) :
+docker compose up -d --build
+# Sans la vraie API, avec la fausse API dans un second conteneur :
+docker compose -f docker-compose.yml -f docker-compose.mock.yml up -d --build
+```
+
+Puis ouvrir <http://localhost:8080> (`UI_PORT=9000` pour changer le port). Le
+front rejoint le réseau Docker de l'API (`hypervisor-api_hypervisor-net`,
+réglable avec `API_NETWORK`) et lui parle par `http://api:3000` (`API_UPSTREAM`).
+
+L'image est publiée sur Docker Hub (`remialban/hypervisor-ui`) par
+`.github/workflows/cd.yml` à chaque push sur `main` (tag `latest`) et à chaque
+tag `v1.2.3` (tag `1.2.3`). Sur un serveur, sans compiler :
+`docker compose pull && docker compose up -d` (`TAG=1.2.3` pour une version précise).
+Secrets GitHub nécessaires : `DOCKERHUB_USERNAME` et `DOCKERHUB_TOKEN`.
+
 ## Organisation du code
 
 Une organisation Angular classique : un dossier par sorte de fichier.
@@ -160,6 +183,7 @@ besoin d'y toucher.
 | `npm start` | Serveur de développement, rechargement automatique |
 | `npm run build` | Build de production dans `dist/` |
 | `npm run mock` / `npm run mock:full` | Fausse API sur le port 3000 |
+| `docker compose up -d --build` | Le front dans Docker sur le port 8080 (voir « Avec Docker ») |
 | `npx ng generate component components/mon-composant` | Crée un composant (ses trois fichiers) |
 | `npx ng generate component pages/ma-page` | Crée une page |
 | `npx ng generate service services/mon-service` | Crée un service |

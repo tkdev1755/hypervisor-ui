@@ -1,0 +1,70 @@
+# Construit l'image Docker du front et la publie sur Docker Hub : remialban/hypervisor-ui.
+#
+#   push sur main         → tags « latest », « main » et « sha-abc1234 »
+#   tag v1.2.3            → tags « 1.2.3 » et « sha-abc1234 »
+#   pull request          → construit seulement (vérifie que l'image se construit), ne publie rien
+#   bouton « Run workflow » (onglet Actions) → comme un push sur la branche choisie
+#
+# Secrets à créer dans GitHub (Settings → Secrets and variables → Actions) :
+#   DOCKERHUB_USERNAME  le compte Docker Hub (remialban)
+#   DOCKERHUB_TOKEN     un jeton d'accès Docker Hub avec le droit « Read & Write »
+name: CD - Deploy to Docker Hub
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*.*.*'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  IMAGE: remialban/hypervisor-ui
+
+jobs:
+  build-and-push:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Pas de connexion pour une pull request : rien n'est publié, et les secrets ne sont pas
+      # donnés aux pull requests venant d'un fork.
+      - name: Log in to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=sha,format=short
+
+      # L'étape « web » du Dockerfile : nginx et l'application compilée (ng build y est lancé :
+      # une erreur de compilation fait échouer le workflow).
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: web
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
