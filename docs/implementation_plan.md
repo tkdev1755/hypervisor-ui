@@ -129,6 +129,14 @@ construite par Packer en arrière-plan, puis copiée pour chaque VM créée à p
       la page, choix dans le formulaire, pastille « Désactivé », encadré sur la page. Désactivé : caché aux
       utilisateurs (onglet Templates et « Créer une VM »), plus de « Créer une VM » pour personne.
       L'API liste encore un template désactivé : le masquage n'est fait que par l'interface.
+- [x] Droits par template (migration `0006_template_permissions`) : `TemplateAccess`, `TemplatePermission`,
+      `SetPermission` ; onglet « Droits » (utilisateurs **et groupes**, rôle `use` / `manage`, limite de VM)
+      à la place de l'ancien onglet « Accès » ; interface pilotée par `template.access` (gestionnaires : page du
+      template, modification sans la visibilité, journaux, reconstruction ; limite de VM affichée et respectée) ;
+      page `template-detail` sans `adminGuard` ; repli quand `vm-options` répond 403 ; erreur « Template limit
+      reached » traduite.
+- [ ] À signaler côté API : un utilisateur qui n'a qu'un droit sur un template ne voit pas l'hyperviseur
+      (`VISIBLE_HYPERVISORS` ne tient pas compte des droits), donc n'atteint pas l'onglet Templates.
 - [ ] **Non testé** contre une vraie construction Packer (la vraie API du port 3000 n'a reçu que des `GET`).
 
 ### Groupes d'utilisateurs (25 octobre 2026)
@@ -273,3 +281,4 @@ un 409 affiche un message métier clair.
 | 25 octobre 2026 | Templates : versions, reconstruction, arrêt, journal en direct, accès restreint (nouveau contrat de l'API). |
 | 25 octobre 2026 | Templates : activation / désactivation (`allow_vm_creation`), masqués aux utilisateurs quand désactivés. |
 | 25 octobre 2026 | Groupes d'utilisateurs : administration (groupes imbriqués), « Mes groupes » dans Mon compte. |
+| 25 octobre 2026 | Droits sur les templates : utilisateurs et groupes, rôles « utiliser » / « gérer », limite de VM. |

@@ -13,7 +13,7 @@
   (done)="modalRef.close(result() ?? undefined)"
 >
   <app-column [gap]="16">
-    <app-callout type="warning" title="Réservé aux administrateurs">
+    <app-callout type="warning" title="La configuration exécute des commandes">
       Packer exécute les commandes de la configuration sur la machine qui construit (l'hyperviseur en SSH, ou l'hôte de l'API).
       Cette machine a besoin de packer, qemu-img, virsh et d'un accès à Internet.
     </app-callout>
@@ -44,11 +44,15 @@
       <app-choice-cards label="Pool" [columns]="2" [options]="pools()" [(value)]="pool" />
     </app-column>
 
-    <app-column [gap]="6">
-      <app-text variant="small" weight="medium">Qui peut l'utiliser</app-text>
-      <app-text variant="small" color="muted">Les administrateurs le peuvent toujours. En mode restreint, choisissez les utilisateurs dans l'onglet « Accès » de la page du template.</app-text>
-      <app-choice-cards label="Qui peut l'utiliser" [columns]="2" [options]="visibilityChoices" [(value)]="visibility" />
-    </app-column>
+    @if (auth.isAdmin()) {
+      <app-column [gap]="6">
+        <app-text variant="small" weight="medium">Qui peut l'utiliser</app-text>
+        <app-text variant="small" color="muted">
+          En plus des utilisateurs et groupes qui ont un droit (onglet « Droits » de la page du template). Les administrateurs le peuvent toujours.
+        </app-text>
+        <app-choice-cards label="Qui peut l'utiliser" [columns]="2" [options]="visibilityChoices" [(value)]="visibility" />
+      </app-column>
+    }
 
     <app-column [gap]="6">
       <app-text variant="small" weight="medium">État</app-text>

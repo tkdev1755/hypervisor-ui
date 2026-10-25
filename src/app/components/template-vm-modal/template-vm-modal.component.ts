@@ -1,5 +1,5 @@
 import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
-import { forkJoin } from 'rxjs';
+import { catchError, forkJoin, of } from 'rxjs';
 
 import { ColumnComponent } from '@app/components/layout/column/column.component';
 import { RowComponent } from '@app/components/layout/row/row.component';
@@ -23,11 +23,25 @@ import { VmService } from '@app/services/vm.service';
 import { formatQuotaRow, quotaRows } from '@app/utils/quota';
 
 /**
+ * Les choix par défaut de l'API (src/vm_options.rs), utilisés quand `vm-options` répond 403 :
+ * un droit sur le template suffit pour créer une VM, même sans accès à l'hyperviseur.
+ */
+const FALLBACK_OPTIONS: VmOptions = {
+  storage_pools: [],
+  networks: [{ name: 'default' }],
+  firmware: ['bios', 'uefi'],
+  limits: { memory_mb: { min: 64, max: 1048576 }, vcpus: { min: 1, max: 256 }, disk_gb: { min: 1, max: 2048 } },
+  defaults: { network: 'default', firmware: 'bios', memory_mb: 2048, vcpus: 2, disk_gb: 20 },
+};
+
+/**
  * Créer une VM à partir d'un template : une version prête, un nom, des vCPU, de la mémoire, un réseau,
  * un firmware. Pas de choix de disque : la VM reçoit une copie complète de celui de la version (sa
  * taille compte dans le quota). À l'ouverture, on charge `vm-options` (réseaux, firmwares, limites) et
  * les versions prêtes du template ; la version proposée est `version` si on la donne, sinon la
- * dernière prête (`default_version`).
+ * dernière prête (`default_version`). Sans accès à l'hyperviseur (mais avec un droit sur le template),
+ * `vm-options` répond 403 : on propose alors les choix par défaut de l'API (réseau `default`).
+ * La limite de VM de ce template (`access.max_vms`) est rappelée en haut du formulaire.
  *
  * L'API répond tout de suite avec une tâche (« job ») et copie le disque en arrière-plan : la modale
  * reste en chargement et interroge la tâche jusqu'à sa fin (comme le clonage). Se ferme avec la VM créée.
@@ -85,6 +99,15 @@ export class TemplateVmModalComponent implements OnInit {
   protected readonly start = signal(true);
   /** Admin seulement : créer la VM pour un autre utilisateur (sans choix : pour soi). */
   protected readonly ownerId = signal<string | undefined>(undefined);
+
+  /** La limite de VM de ce template pour l'utilisateur, en une phrase (vide s'il n'y en a pas, ou pour un admin). */
+  protected readonly templateLimit = computed(() => {
+    const { level, max_vms, vm_count } = this.template().access;
+    if (level === 'admin' || max_vms === null) {
+      return '';
+    }
+    return `Vous possédez ${vm_count} VM créée(s) à partir de ce template, sur ${max_vms} au plus.`;
+  });
 
   /** Le quota de l'utilisateur, en une phrase (vide s'il n'a aucune limite). */
   protected readonly quotaSummary = computed(() => {
@@ -149,7 +172,7 @@ export class TemplateVmModalComponent implements OnInit {
     this.loadingLabel.set('Chargement des options…');
     this.state.set('loading');
     forkJoin({
-      options: this.vms.options(this.hypervisorId()),
+      options: this.vms.options(this.hypervisorId()).pipe(catchError(() => of(FALLBACK_OPTIONS))),
       versions: this.templates.listVersions(this.hypervisorId(), this.template().id),
     }).subscribe({
       next: ({ options, versions }) => {

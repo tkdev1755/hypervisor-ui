@@ -11,6 +11,7 @@ import { TextFieldComponent } from '@app/components/ui/text-field/text-field.com
 import { TextComponent } from '@app/components/ui/text/text.component';
 import { AppError, isAppError } from '@app/models/app-error.model';
 import { Template, TemplateVisibility } from '@app/models/template.model';
+import { AuthService } from '@app/services/auth.service';
 import { ModalRef } from '@app/services/modal-ref';
 import { TemplateService } from '@app/services/template.service';
 import { VmService } from '@app/services/vm.service';
@@ -32,6 +33,9 @@ const MAX_CONFIG_BYTES = 64 * 1024;
  *
  * Le nom du disque est lu automatiquement dans la configuration (vm_name) : le champ ne sert que
  * si on veut le préciser à la main. La liste des pools vient de `vm-options`, chargée à l'ouverture.
+ * Un gestionnaire (droit 'manage', pas admin) peut aussi modifier le template, sauf sa visibilité :
+ * le choix est alors caché et le champ n'est pas envoyé (l'API répondrait 403). S'il n'a pas l'accès à
+ * l'hyperviseur, `vm-options` lui répond 403 : on garde alors simplement le pool actuel.
  * Se ferme avec le template créé ou modifié.
  */
 @Component({
@@ -44,6 +48,7 @@ export class TemplateFormModalComponent implements OnInit {
   protected readonly modalRef = inject(ModalRef<Template>);
   private readonly templates = inject(TemplateService);
   private readonly vms = inject(VmService);
+  protected readonly auth = inject(AuthService);
 
   readonly hypervisorId = input.required<string>();
   readonly hypervisorName = input('');
@@ -66,7 +71,7 @@ export class TemplateFormModalComponent implements OnInit {
 
   protected readonly visibilityChoices: Choice<TemplateVisibility>[] = [
     { value: 'hypervisor', label: "Tous ceux qui ont l'accès", description: "à l'hyperviseur" },
-    { value: 'restricted', label: 'Restreint', description: 'Seulement les utilisateurs choisis' },
+    { value: 'restricted', label: 'Restreint', description: 'Seulement ceux qui ont un droit' },
   ];
 
   /** Les pools de l'hyperviseur, proposés en cartes ; vide tant qu'ils ne sont pas chargés. */
@@ -146,7 +151,17 @@ export class TemplateFormModalComponent implements OnInit {
         this.pool.set(this.template()?.pool ?? preferred?.name);
         this.state.set('form');
       },
-      error: (error: unknown) => this.fail(error),
+      error: (error: unknown) => {
+        // En modification, on peut se passer de la liste : on propose seulement le pool actuel.
+        const template = this.template();
+        if (template) {
+          this.pools.set([{ value: template.pool, label: template.pool, description: 'Pool actuel' }]);
+          this.pool.set(template.pool);
+          this.state.set('form');
+        } else {
+          this.fail(error);
+        }
+      },
     });
   }
 
@@ -178,8 +193,9 @@ export class TemplateFormModalComponent implements OnInit {
       packer_config: this.packerConfig(),
       disk_name: this.finalDiskName(),
       pool: this.pool(),
-      visibility: this.visibility(),
       allow_vm_creation: this.enabled(),
+      // La visibilité est réservée aux admins : un gestionnaire ne l'envoie pas.
+      ...(this.auth.isAdmin() ? { visibility: this.visibility() } : {}),
     };
     const template = this.template();
     this.loadingLabel.set(template ? 'Enregistrement…' : 'Lancement de la construction…');

@@ -1,0 +1,41 @@
+<app-column [gap]="16">
+  <app-row [gap]="8">
+    <app-text color="muted">Les utilisateurs et les groupes qui ont un droit sur ce template</app-text>
+    <app-spacer />
+    <app-button variant="ghost" size="sm" icon="refresh" [disabled]="loading()" (pressed)="load()">Actualiser</app-button>
+    <app-button size="sm" icon="plus" (pressed)="edit()">Donner un droit</app-button>
+  </app-row>
+
+  @if (visibility() === 'hypervisor') {
+    <app-callout title="Ouvert à tout l'hyperviseur">
+      En plus des droits ci-dessous, tous les utilisateurs qui ont l'accès à l'hyperviseur peuvent utiliser ce template, sans limite.
+      Restreignez-le (bouton « Modifier ») pour que seuls les droits comptent.
+    </app-callout>
+  } @else {
+    <app-callout type="tip" title="Template restreint">
+      Seuls les utilisateurs et les membres des groupes ci-dessous (et les administrateurs) y ont accès. Un droit suffit, même sans accès à
+      l'hyperviseur. Si plusieurs droits s'appliquent à quelqu'un, le plus généreux l'emporte.
+    </app-callout>
+  }
+
+  @if (loading()) {
+    <app-loading label="Chargement des droits…" />
+  } @else if (error(); as error) {
+    <app-error-panel [error]="error" [retryable]="true" (retry)="load()" />
+  } @else if (entries().length === 0) {
+    <app-empty-state icon="shield" title="Aucun droit donné" message="Personne n'a de droit particulier sur ce template." />
+  } @else {
+    <app-list>
+      @for (entry of entries(); track entry.kind + entry.id) {
+        <app-list-tile [icon]="entry.kind === 'group' ? 'folder' : 'user'" [title]="entry.name" [subtitle]="describe(entry)">
+          <app-button variant="ghost" size="sm" icon="edit" (pressed)="edit(entry)">Modifier</app-button>
+          <app-button variant="danger-ghost" size="sm" icon="trash" (pressed)="remove(entry)">Retirer</app-button>
+        </app-list-tile>
+      }
+    </app-list>
+  }
+
+  @if (actionError(); as actionError) {
+    <app-error-panel [error]="actionError" />
+  }
+</app-column>

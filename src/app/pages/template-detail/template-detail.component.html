@@ -1,4 +1,13 @@
 @if (template(); as template) {
+  @if (!manages()) {
+    <app-page [backLink]="'/hypervisors/' + id()" [backLabel]="hypervisor()?.name ?? 'Hyperviseur'" eyebrow="Template" [title]="template.name">
+      <app-empty-state
+        icon="shield"
+        title="Vous ne gérez pas ce template"
+        message="Vous pouvez créer des VM à partir de lui depuis l'onglet Templates de l'hyperviseur. Pour le modifier, demandez le droit « Gérer » à un administrateur."
+      />
+    </app-page>
+  } @else {
   <app-page
     [backLink]="'/hypervisors/' + id()"
     [backLabel]="hypervisor()?.name ?? 'Hyperviseur'"
@@ -10,7 +19,7 @@
       <app-status-badge actions [status]="status" />
     }
     <ng-container actions>
-      @if (template.default_version && template.allow_vm_creation) {
+      @if (template.default_version && template.allow_vm_creation && !limitReached(template)) {
         <app-button icon="plus" (pressed)="createVm(template)">Créer une VM</app-button>
       }
       <app-button variant="ghost" [icon]="template.allow_vm_creation ? 'stop' : 'play'" [loading]="toggling()" (pressed)="toggle(template)">
@@ -22,7 +31,8 @@
         <app-button variant="ghost" icon="refresh" (pressed)="rebuild(template)">Reconstruire</app-button>
       }
       <app-button variant="ghost" icon="edit" (pressed)="edit(template)">Modifier</app-button>
-      @if (!building()) {
+      <!-- Supprimer un template est réservé aux administrateurs. -->
+      @if (!building() && auth.isAdmin()) {
         <app-button variant="danger-ghost" icon="trash" (pressed)="remove(template)">Supprimer</app-button>
       }
     </ng-container>
@@ -67,9 +77,15 @@
           <app-text variant="title">{{ template.disk_name }}</app-text>
         </app-column>
       </app-card>
+      <app-card>
+        <app-column [gap]="4">
+          <app-text variant="eyebrow">Votre droit</app-text>
+          <app-text variant="title">{{ accessLabel(template) }}</app-text>
+        </app-column>
+      </app-card>
     </app-grid>
 
-    <app-tabs [tabs]="onglets" [(active)]="onglet" />
+    <app-tabs [tabs]="onglets()" [(active)]="onglet" />
 
     @switch (onglet()) {
       @case ('versions') {
@@ -80,7 +96,7 @@
             @for (version of versions(); track version.version) {
               <app-list-tile icon="layers" [title]="'Version ' + version.version" [subtitle]="versionSubtitle(version)" [status]="version.status">
                 <app-button variant="ghost" size="sm" icon="terminal" (pressed)="logs(template, version)">Journal</app-button>
-                @if (version.status === 'created' && template.allow_vm_creation) {
+                @if (version.status === 'created' && template.allow_vm_creation && !limitReached(template)) {
                   <app-button variant="ghost" size="sm" icon="plus" (pressed)="createVm(template, version)">Créer une VM</app-button>
                 }
                 @if (!isBuilding(version)) {
@@ -106,11 +122,12 @@
           <app-code-block [code]="template.packer_config ?? ''" title="configuration Packer" [maxHeight]="520" />
         </app-column>
       }
-      @case ('access') {
-        <app-template-access-list [hypervisorId]="id()" [templateId]="template.id" [visibility]="template.visibility" />
+      @case ('permissions') {
+        <app-template-permission-list [hypervisorId]="id()" [templateId]="template.id" [visibility]="template.visibility" />
       }
     }
   </app-page>
+  }
 } @else if (error(); as error) {
   <app-page [backLink]="'/hypervisors/' + id()" backLabel="Hyperviseur" title="Template">
     <app-error-panel [error]="error" [retryable]="true" (retry)="load()" />

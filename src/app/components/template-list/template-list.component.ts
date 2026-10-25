@@ -15,7 +15,7 @@ import { LoadingComponent } from '@app/components/ui/loading/loading.component';
 import { ResourceCardComponent } from '@app/components/ui/resource-card/resource-card.component';
 import { TextComponent } from '@app/components/ui/text/text.component';
 import { AppError } from '@app/models/app-error.model';
-import { Template, isBuilding } from '@app/models/template.model';
+import { Template, canManageTemplate, isBuilding, templateLimitReached } from '@app/models/template.model';
 import { VirtualMachine } from '@app/models/virtual-machine.model';
 import { AuthService } from '@app/services/auth.service';
 import { InventoryService } from '@app/services/inventory.service';
@@ -26,14 +26,15 @@ import { TemplateService } from '@app/services/template.service';
  * Les templates d'un hyperviseur : des images disque construites par Packer, à partir desquelles
  * on crée des VM déjà installées.
  *
- *  - Un administrateur voit tous les templates (même en construction ou ratés) et en crée de
- *    nouveaux ; un clic sur une carte ouvre la page du template (versions, journal, accès…).
- *  - Un utilisateur qui a l'accès à l'hyperviseur ne voit que les templates prêts qui lui sont
- *    ouverts, et crée des VM à partir d'eux. Sans cet accès, l'API répond 403 : on l'explique.
+ * L'API ne renvoie que les templates sur lesquels l'utilisateur a un droit, et chacun dit ce qu'il
+ * peut en faire (`access.level`) :
+ *  - 'admin' ou 'manage' : un clic sur la carte ouvre la page du template (versions, journal…), et on
+ *    peut l'activer ou le désactiver. Seul un admin crée des templates.
+ *  - 'use' : seulement « Créer une VM », dans la limite éventuelle de VM de ce template (`access.max_vms`).
  *
  * Un template DÉSACTIVÉ (`allow_vm_creation: false`) ne permet plus de créer de VM, même à un admin.
- * L'API le liste quand même : on le cache ici aux utilisateurs, l'admin le voit marqué « désactivé »
- * et peut le réactiver depuis la carte.
+ * L'API le liste quand même : on le cache ici à ceux qui ne font que l'utiliser ; ceux qui le gèrent
+ * le voient marqué « désactivé » et peuvent le réactiver depuis la carte.
  *
  * Chaque carte montre l'état de la DERNIÈRE version. Pendant une reconstruction, on peut toujours
  * créer des VM : elles partent de la dernière version prête (`default_version`).
@@ -64,11 +65,13 @@ export class TemplateListComponent implements OnInit, OnDestroy {
   /** L'id du template en cours d'activation / désactivation (pour afficher son chargement). */
   protected readonly busyId = signal<string | null>(null);
 
-  /** Ce qu'on affiche : tout pour un admin ; pour un utilisateur, seulement les templates activés. */
-  protected readonly visible = computed(() =>
-    this.auth.isAdmin() ? this.list() : this.list().filter((template) => template.allow_vm_creation),
-  );
-  /** 403 : l'utilisateur n'a pas l'accès à cet hyperviseur (il y voit seulement une VM prêtée). */
+  /** Ce qu'on affiche : les templates activés, et aussi les désactivés pour ceux qui les gèrent. */
+  protected readonly visible = computed(() => this.list().filter((template) => template.allow_vm_creation || canManageTemplate(template)));
+
+  // Exposés au .html : des fonctions simples, définies dans models/template.model.ts.
+  protected readonly canManage = canManageTemplate;
+  protected readonly limitReached = templateLimitReached;
+  /** 403 : l'API refuse la liste (ancien comportement ; elle renvoie aujourd'hui une liste vide sans droit). */
   protected readonly noAccess = computed(() => this.error()?.kind === 'business' && this.error()?.status === 403);
 
   /** Y a-t-il une construction en cours ? Si oui, on recharge la liste régulièrement. */
@@ -116,13 +119,20 @@ export class TemplateListComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Peut-on créer une VM ? Il faut que le template soit activé et ait au moins une version prête. */
+  /** Peut-on créer une VM ? Template activé, au moins une version prête, et limite de VM pas atteinte. */
   protected canCreateVm(template: Template): boolean {
-    return template.allow_vm_creation && template.default_version !== null && template.default_version !== undefined;
+    const ready = template.default_version !== null && template.default_version !== undefined;
+    return template.allow_vm_creation && ready && !templateLimitReached(template);
   }
 
-  /** La ligne d'information de la carte, d'après la dernière version. */
+  /** La ligne d'information de la carte : la dernière version, et la limite de VM s'il y en a une. */
   protected meta(template: Template): string {
+    const { max_vms, vm_count, level } = template.access;
+    const info = this.versionInfo(template);
+    return max_vms !== null && level !== 'admin' ? `${info} · ${vm_count}/${max_vms} VM` : info;
+  }
+
+  private versionInfo(template: Template): string {
     const latest = template.latest_version;
     if (!latest) {
       return 'Aucune version';
@@ -140,9 +150,9 @@ export class TemplateListComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Le sous-titre : le pool, puis « restreint » et « désactivé » si c'est le cas. */
+  /** Le sous-titre : le rôle de l'utilisateur (s'il le gère), le pool, puis « restreint » et « désactivé ». */
   protected subtitle(template: Template): string {
-    const parts = [`pool ${template.pool}`];
+    const parts = template.access.level === 'manage' ? ['vous le gérez', `pool ${template.pool}`] : [`pool ${template.pool}`];
     if (template.visibility === 'restricted') {
       parts.push('accès restreint');
     }
@@ -160,7 +170,7 @@ export class TemplateListComponent implements OnInit, OnDestroy {
     return template.status ?? undefined;
   }
 
-  /** Admin : activer ou désactiver le template (PATCH allow_vm_creation), sans confirmation : c'est réversible. */
+  /** Admin ou gestionnaire : activer ou désactiver le template (PATCH allow_vm_creation), sans confirmation : c'est réversible. */
   protected toggle(template: Template): void {
     this.busyId.set(template.id);
     this.actionError.set(null);
@@ -176,9 +186,9 @@ export class TemplateListComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Admin : la page du template (versions, journal, configuration, accès). */
+  /** Admin ou gestionnaire : la page du template (versions, journal, configuration, droits). */
   protected open(template: Template): void {
-    if (this.auth.isAdmin()) {
+    if (canManageTemplate(template)) {
       this.router.navigate(['/hypervisors', this.hypervisorId(), 'templates', template.id]);
     }
   }

@@ -7,7 +7,7 @@ import { ColumnComponent } from '@app/components/layout/column/column.component'
 import { GridComponent } from '@app/components/layout/grid/grid.component';
 import { PageComponent } from '@app/components/layout/page/page.component';
 import { ConfirmModalComponent } from '@app/components/modal/confirm-modal/confirm-modal.component';
-import { TemplateAccessListComponent } from '@app/components/template-access-list/template-access-list.component';
+import { TemplatePermissionListComponent } from '@app/components/template-permission-list/template-permission-list.component';
 import { TemplateDeleteModalComponent } from '@app/components/template-delete-modal/template-delete-modal.component';
 import { TemplateFormModalComponent } from '@app/components/template-form-modal/template-form-modal.component';
 import { TemplateLogModalComponent } from '@app/components/template-log-modal/template-log-modal.component';
@@ -25,27 +25,31 @@ import { Tab, TabsComponent } from '@app/components/ui/tabs/tabs.component';
 import { TextComponent } from '@app/components/ui/text/text.component';
 import { AppError } from '@app/models/app-error.model';
 import { Hypervisor } from '@app/models/hypervisor.model';
-import { Template, TemplateVersion, isBuilding } from '@app/models/template.model';
+import { Template, TemplateVersion, canManageTemplate, isBuilding, templateLimitReached } from '@app/models/template.model';
 import { VirtualMachine } from '@app/models/virtual-machine.model';
+import { AuthService } from '@app/services/auth.service';
 import { ContextBridgeService } from '@app/services/context-bridge.service';
 import { InventoryService } from '@app/services/inventory.service';
 import { ModalService } from '@app/services/modal.service';
 import { TemplateService } from '@app/services/template.service';
 
-type Onglet = 'versions' | 'config' | 'access';
+type Onglet = 'versions' | 'config' | 'permissions';
 
 /**
- * La page d'un template (admin seulement, voir adminGuard dans app.routes.ts), à l'adresse
- * /hypervisors/:id/templates/:templateId.
+ * La page d'un template, à l'adresse /hypervisors/:id/templates/:templateId, pour ceux qui le gèrent
+ * (droit 'manage') et les admins. Ce qu'on affiche dépend de `template.access.level` :
  *
  *  - Versions : chaque construction, avec son état, son journal, « Créer une VM » (version prête)
  *    et sa suppression. Pendant une construction, la page se recharge toutes les 3 secondes.
  *  - Configuration : la définition actuelle (configuration Packer, disque, pool, visibilité).
- *  - Accès : les utilisateurs autorisés quand le template est restreint.
+ *  - Droits (admin seulement) : les utilisateurs et groupes qui peuvent l'utiliser ou le gérer.
+ *
+ * Un simple utilisateur ('use') qui arrive ici par l'adresse ne voit qu'un message : il crée ses VM
+ * depuis l'onglet Templates de l'hyperviseur.
  *
  * En haut : Activer / Désactiver (désactivé : plus aucune VM à partir de lui, et les utilisateurs ne le
  * voient plus), Reconstruire (nouvelle version à partir de la définition actuelle), Arrêter la
- * construction (puis Forcer l'arrêt si Packer tarde à faire le ménage), Modifier et Supprimer.
+ * construction (puis Forcer l'arrêt si Packer tarde à faire le ménage), Modifier, et Supprimer (admin).
  */
 @Component({
   selector: 'app-template-detail',
@@ -65,7 +69,7 @@ type Onglet = 'versions' | 'config' | 'access';
     LoadingComponent,
     ErrorPanelComponent,
     EmptyStateComponent,
-    TemplateAccessListComponent,
+    TemplatePermissionListComponent,
   ],
   templateUrl: './template-detail.component.html',
   styleUrl: './template-detail.component.scss',
@@ -76,6 +80,7 @@ export class TemplateDetailComponent implements OnInit, OnDestroy {
   private readonly inventory = inject(InventoryService);
   private readonly modal = inject(ModalService);
   private readonly router = inject(Router);
+  protected readonly auth = inject(AuthService);
 
   readonly id = input.required<string>();
   readonly templateId = input.required<string>();
@@ -88,11 +93,26 @@ export class TemplateDetailComponent implements OnInit, OnDestroy {
   /** Une activation / désactivation est en cours (chargement du bouton). */
   protected readonly toggling = signal(false);
 
-  protected readonly onglets: Tab<Onglet>[] = [
-    { id: 'versions', label: 'Versions', icon: 'layers' },
-    { id: 'config', label: 'Configuration', icon: 'code' },
-    { id: 'access', label: 'Accès', icon: 'shield' },
-  ];
+  /** L'onglet « Droits » est réservé aux administrateurs (l'API répond 403 sinon). */
+  protected readonly onglets = computed(() => {
+    const onglets: Tab<Onglet>[] = [
+      { id: 'versions', label: 'Versions', icon: 'layers' },
+      { id: 'config', label: 'Configuration', icon: 'code' },
+    ];
+    if (this.auth.isAdmin()) {
+      onglets.push({ id: 'permissions', label: 'Droits', icon: 'shield' });
+    }
+    return onglets;
+  });
+
+  // Exposée au .html : la limite de VM de ce template est-elle atteinte (jamais pour un admin) ?
+  protected readonly limitReached = templateLimitReached;
+
+  /** L'utilisateur connecté gère-t-il ce template ? Sinon la page ne montre qu'un message. */
+  protected readonly manages = computed(() => {
+    const template = this.template();
+    return template !== null && canManageTemplate(template);
+  });
   protected readonly onglet = signal<Onglet>('versions');
 
   protected readonly building = computed(() => isBuilding(this.template()?.status));
@@ -148,6 +168,16 @@ export class TemplateDetailComponent implements OnInit, OnDestroy {
       },
       error: (error: AppError) => this.error.set(error),
     });
+  }
+
+  /** « Administrateur », « Gestionnaire · 1/3 VM »… : le droit de l'utilisateur connecté. */
+  protected accessLabel(template: Template): string {
+    const { level, max_vms, vm_count } = template.access;
+    if (level === 'admin') {
+      return 'Administrateur';
+    }
+    const role = level === 'manage' ? 'Gestionnaire' : 'Utilisateur';
+    return max_vms === null ? role : `${role} · ${vm_count}/${max_vms} VM`;
   }
 
   protected date(seconds: number | null | undefined): string {

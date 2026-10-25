@@ -12,6 +12,9 @@
     @if (quotaSummary(); as summary) {
       <app-callout title="Votre quota">{{ summary }}</app-callout>
     }
+    @if (templateLimit(); as limit) {
+      <app-callout title="Limite de ce template">{{ limit }}</app-callout>
+    }
     <app-text-field label="Nom" [placeholder]="template().name + '-01'" [(value)]="name" [error]="nameError()" (enter)="submit()" />
 
     <app-column [gap]="6">

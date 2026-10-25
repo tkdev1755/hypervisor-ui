@@ -50,10 +50,10 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/vm-detail/vm-detail.component').then((m) => m.VmDetailComponent),
       },
       {
-        // La page d'un template : réservée aux administrateurs (un utilisateur crée ses VM depuis l'onglet Templates).
+        // La page d'un template : pour ceux qui le gèrent (droit 'manage') et les admins. Pas de garde ici :
+        // le droit dépend du template, c'est la page qui lit `access` (et l'API qui fait respecter).
         path: 'hypervisors/:id/templates/:templateId',
         title: 'Template · Hypervisor',
-        canActivate: [adminGuard],
         loadComponent: () => import('./pages/template-detail/template-detail.component').then((m) => m.TemplateDetailComponent),
       },
       {

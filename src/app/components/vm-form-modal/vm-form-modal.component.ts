@@ -12,7 +12,7 @@ import { NumberFieldComponent } from '@app/components/ui/number-field/number-fie
 import { TextFieldComponent } from '@app/components/ui/text-field/text-field.component';
 import { TextComponent } from '@app/components/ui/text/text.component';
 import { AppError, isAppError } from '@app/models/app-error.model';
-import { CreateVmFromTemplate, Template } from '@app/models/template.model';
+import { CreateVmFromTemplate, Template, templateLimitReached } from '@app/models/template.model';
 import { VmOptions } from '@app/models/vm-options.model';
 import { CreateVm, DiskSpec, VirtualMachine, VolumeRef } from '@app/models/virtual-machine.model';
 import { AuthService } from '@app/services/auth.service';
@@ -304,7 +304,10 @@ export class VmFormModalComponent implements OnInit {
     }).subscribe({
       next: ({ options, templates }) => {
         // Un template est utilisable s'il est activé et a une version prête (même si une reconstruction est en cours).
-        const ready = templates.filter((t) => t.allow_vm_creation && t.default_version !== null && t.default_version !== undefined);
+        // (et si la limite de VM de ce template n'est pas atteinte).
+        const ready = templates.filter(
+          (t) => t.allow_vm_creation && t.default_version !== null && t.default_version !== undefined && !templateLimitReached(t),
+        );
         this.templates.set(ready);
         this.templateId.set(ready[0]?.id);
         this.options.set(options);

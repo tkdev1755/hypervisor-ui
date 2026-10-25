@@ -7,20 +7,24 @@ import {
   BuildLog,
   CreateTemplate,
   CreateVmFromTemplate,
+  SetPermission,
   Template,
-  TemplateAccessEntry,
+  TemplatePermission,
   TemplateVersion,
   UpdateTemplate,
 } from '../models/template.model';
 import { apiContext } from '../utils/api-context';
 
 /**
- * Les routes des templates d'un hyperviseur, de leurs versions et de leurs accès.
+ * Les routes des templates d'un hyperviseur, de leurs versions et des droits sur eux.
  *
- * Un administrateur voit tout, crée, modifie, reconstruit, arrête et supprime les templates,
- * lit les journaux de construction et choisit qui peut utiliser un template restreint.
- * Un utilisateur qui a l'accès à l'hyperviseur voit les templates prêts qui lui sont ouverts
- * (et seulement leurs versions prêtes), et crée des VM à partir d'eux.
+ * - Un administrateur peut tout faire : créer et supprimer des templates, changer leur visibilité,
+ *   donner des droits à des utilisateurs ou à des groupes.
+ * - Un droit 'manage' permet de modifier un template, de l'activer ou le désactiver, de le reconstruire,
+ *   d'arrêter une construction, de lire les journaux et de supprimer des versions.
+ * - Un droit 'use' (ou un template 'hypervisor' quand on a l'accès à l'hyperviseur) permet de voir ses
+ *   versions prêtes et d'en créer des VM, dans la limite éventuelle `max_vms`.
+ * Chaque template dit à l'utilisateur connecté ce qu'il peut en faire (`access`).
  */
 @Injectable({ providedIn: 'root' })
 export class TemplateService {
@@ -87,18 +91,21 @@ export class TemplateService {
     return this.http.post<TemplateVersion>(`${this.url(hypervisorId, templateId)}/stop`, null, { params, context: this.context });
   }
 
-  // ---------- accès (templates restreints) ----------
+  // ---------- droits (admin seulement) ----------
 
-  listAccess(hypervisorId: string, templateId: string): Observable<TemplateAccessEntry[]> {
-    return this.http.get<TemplateAccessEntry[]>(`${this.url(hypervisorId, templateId)}/access`, { context: this.context });
+  /** Les droits donnés sur le template : les utilisateurs d'abord, puis les groupes. */
+  listPermissions(hypervisorId: string, templateId: string): Observable<TemplatePermission[]> {
+    return this.http.get<TemplatePermission[]>(`${this.url(hypervisorId, templateId)}/permissions`, { context: this.context });
   }
 
-  grantAccess(hypervisorId: string, templateId: string, userId: string): Observable<void> {
-    return this.http.put<void>(`${this.url(hypervisorId, templateId)}/access/${userId}`, null, { context: this.context });
+  /** Donne ou change le droit d'un utilisateur ('user') ou d'un groupe ('group'). */
+  setPermission(hypervisorId: string, templateId: string, kind: 'user' | 'group', id: string, body: SetPermission): Observable<void> {
+    return this.http.put<void>(`${this.url(hypervisorId, templateId)}/permissions/${kind}s/${id}`, body, { context: this.context });
   }
 
-  revokeAccess(hypervisorId: string, templateId: string, userId: string): Observable<void> {
-    return this.http.delete<void>(`${this.url(hypervisorId, templateId)}/access/${userId}`, { context: this.context });
+  /** Retire un droit : les VM déjà créées sont gardées. */
+  removePermission(hypervisorId: string, templateId: string, kind: 'user' | 'group', id: string): Observable<void> {
+    return this.http.delete<void>(`${this.url(hypervisorId, templateId)}/permissions/${kind}s/${id}`, { context: this.context });
   }
 
   // ---------- VM ----------

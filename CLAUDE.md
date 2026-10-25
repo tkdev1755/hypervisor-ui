@@ -86,7 +86,7 @@ src/app/
 │   └── hypervisor-form-modal, vm-form-modal, vm-clone-modal, vm-delete-modal, vm-console-modal,
 │       vm-share-modal, vm-owner-modal, vm-list, disk-list, network-list,
 │       template-list, template-form-modal, template-delete-modal, template-vm-modal, template-log-modal,
-│       template-access-list + template-access-modal,
+│       template-permission-list + template-permission-modal,
 │       hypervisor-access-list + hypervisor-access-modal, user-picker,
 │       user-form-modal, user-quota-modal, user-password-modal, password-form-modal,
 │       group-form-modal, group-member-modal, group-subgroup-modal, user-group-list, user-groups-modal   (composants métier)
@@ -191,23 +191,24 @@ mainteneur a conçue en entreprise. Respectez leur contrat.
 - `VirtualMachine.owner` / `access` (`'admin' | 'owner' | 'shared'`) pilotent l'affichage
   (`utils/vm-access.ts`) : une VM prêtée n'offre que console, démarrer, arrêter, « Rendre ».
 - **Templates** (`templates.rs` de l'API) : une définition modifiable (configuration Packer, disque, pool,
-  visibilité) et des **versions** numérotées (une par construction, chacune avec son disque, son état et son
-  journal). Seul un admin crée, modifie (PATCH : les versions existantes ne changent pas, il faut
-  « Reconstruire »), reconstruit, arrête (`stop`, puis `stop?force=true`), supprime un template ou une
-  version, lit les journaux et gère les accès : tout cela sur la page `template-detail` (`adminGuard`).
-  Un utilisateur **avec l'accès** à l'hyperviseur voit les templates qui ont une version prête et qui lui sont
-  ouverts (`visibility: 'hypervisor'`, ou `'restricted'` + listé dans `…/access`), sans configuration, journal
-  ni erreur (403 sans accès : `template-list` l'explique). `status` / `latest_version` décrivent la dernière
-  version ; on crée une VM depuis `default_version` (la dernière **prête**), même pendant une reconstruction.
-  Asynchrone partout : la liste se recharge toutes les 5 s et la page toutes les 3 s pendant une construction ;
-  le journal se lit par morceaux (`offset` = `next_offset` précédent) toutes les 2 s ; la création de VM suit
-  sa tâche (`JobService.watch`), depuis l'onglet Templates, la page du template (choix de la version) ou
-  « Créer une VM » (source « Template », dernière version prête).
-  **Activer / désactiver** (`allow_vm_creation`, PATCH) : désactivé, l'API refuse toute création de VM
-  (409, admins compris) mais **liste encore** le template ; c'est le front qui le cache aux utilisateurs
-  (`template-list` → `visible()`, filtre de `vm-form-modal`). L'admin le voit avec la pastille « Désactivé ». Les 409 ont des causes variées :
-  leur texte français vient de `TEMPLATE_MESSAGES` dans le mapper. Ne lancez **aucune** construction sur la
-  vraie API sans accord (elle installe un OS sur l'hyperviseur) : `npm run mock:full` la simule.
+  visibilité) et des **versions** numérotées (une par construction : disque, état, journal).
+  **Droits** : chaque template renvoie `access` (`level` : `use` | `manage` | `admin`, `max_vms`, `vm_count`) ;
+  l'interface s'y fie (`canManageTemplate`, `templateLimitReached` dans `models/template.model.ts`), jamais au
+  seul `auth.isAdmin()`. Un droit (`…/permissions/users|groups/{id}`, admin seulement, onglet « Droits ») va à
+  un utilisateur ou à un groupe (groupes imbriqués compris) : `use` = voir les versions prêtes et créer des VM
+  (dans la limite `max_vms`, 403 « Template limit reached » → `QUOTA_EXCEEDED`) ; `manage` = aussi modifier
+  (sauf la visibilité : ne pas l'envoyer, 403), activer/désactiver, reconstruire, arrêter, journaux, supprimer
+  une version. Un template `hypervisor` est aussi utilisable par ceux qui ont l'accès à l'hyperviseur.
+  Créer / supprimer un template, changer sa visibilité, donner des droits : admin. La page `template-detail`
+  n'a donc **pas de garde** : elle lit `access` (message pour un simple utilisateur). Un droit suffit pour créer
+  une VM sans accès à l'hyperviseur : `vm-options` répond alors 403, et `template-vm-modal` / `template-form-modal`
+  se rabattent sur des valeurs par défaut. **Limite connue de l'API** : un utilisateur qui n'a qu'un droit sur
+  un template (ni accès ni VM sur l'hyperviseur) ne voit pas l'hyperviseur (`VISIBLE_HYPERVISORS`), donc pas
+  l'onglet Templates.
+  Le reste : `default_version` = dernière version **prête** (VM possibles pendant une reconstruction) ; la
+  liste se recharge toutes les 5 s et la page toutes les 3 s pendant une construction ; le journal se lit par
+  morceaux (`offset` = `next_offset`). **Activer / désactiver** (`allow_vm_creation`) : désactivé, l'API refuse
+  toute création de VM (409) mais liste encore le template ; l'interface le cache à ceux qui ne le gèrent pas.
 - **Groupes** (`groups.rs` de l'API) : des groupes d'utilisateurs qui contiennent aussi des groupes (sans cycle :
   l'API répond 409, texte français dans `GROUP_MESSAGES` du mapper). Ils ne donnent encore aucun droit.
   Admin seulement : pages `/admin/groups` et `/admin/groups/:groupId` (`adminGuard`, lien « Groupes » de la barre

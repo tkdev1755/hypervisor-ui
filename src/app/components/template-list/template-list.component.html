@@ -27,13 +27,15 @@
           [subtitle]="subtitle(template)"
           [status]="badge(template)"
           [meta]="meta(template)"
-          [clickable]="auth.isAdmin()"
+          [clickable]="canManage(template)"
           (tap)="open(template)"
         >
           @if (canCreateVm(template)) {
             <app-button size="sm" icon="plus" (pressed)="createVm(template)">Créer une VM</app-button>
+          } @else if (limitReached(template) && template.allow_vm_creation) {
+            <app-button size="sm" icon="plus" [disabled]="true">Limite de VM atteinte</app-button>
           }
-          @if (auth.isAdmin()) {
+          @if (canManage(template)) {
             <app-button variant="ghost" size="sm" icon="edit" (pressed)="open(template)">Gérer</app-button>
             <app-button
               variant="ghost"
@@ -52,7 +54,11 @@
             <app-button icon="plus" (pressed)="create()">Créer un template</app-button>
           </app-empty-state>
         } @else {
-          <app-empty-state icon="layers" title="Aucun template" message="Aucun template n'est prêt pour vous sur cet hyperviseur pour le moment." />
+          <app-empty-state
+            icon="layers"
+            title="Aucun template"
+            message="Aucun template prêt ne vous est ouvert sur cet hyperviseur. Un administrateur peut vous en donner le droit, à vous ou à l'un de vos groupes."
+          />
         }
       }
     </app-grid>

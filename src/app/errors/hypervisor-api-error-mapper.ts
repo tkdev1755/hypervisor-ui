@@ -104,6 +104,7 @@ const TEMPLATE_MESSAGES: { pattern: RegExp; message: string }[] = [
   { pattern: /^disk_name/i, message: 'Le nom du fichier disque doit faire de 1 à 64 caractères : lettres, chiffres, « - », « _ » ou « . » (pas au début).' },
   { pattern: /^packer_config/i, message: 'La configuration Packer est vide ou trop longue (64 Ko au maximum).' },
   { pattern: /^Invalid pool/i, message: 'Le nom du pool est invalide.' },
+  { pattern: /^max_vms must be/i, message: 'La limite de VM doit être 0 ou plus (vide : sans limite).' },
 ];
 
 /** Même principe pour les groupes (groups.rs). */
@@ -163,6 +164,11 @@ export class HypervisorApiErrorMapper implements ErrorMapper {
   /** Le texte du catalogue, sauf pour les cas où le contexte permet d'être plus précis. */
   private messageFor(code: BusinessErrorCode, origin: ErrorOrigin, body: ApiMessage | null): string {
     if (code === 'QUOTA_EXCEEDED') {
+      // « Template limit reached: you may own at most 2 VMs from this template » : la limite d'un template.
+      const templateLimit = /at most (\d+) VMs from this template/.exec(body?.content ?? '');
+      if (templateLimit) {
+        return `Limite atteinte pour ce template : vous pouvez posséder au plus ${templateLimit[1]} VM créée(s) à partir de lui. Un administrateur peut la changer.`;
+      }
       return quotaMessage(body?.content) ?? CATALOG[code].message;
     }
     if ((code === 'CONFLICT' || code === 'INVALID_REQUEST') && origin.endpoint.includes('/templates')) {
@@ -198,7 +204,7 @@ export class HypervisorApiErrorMapper implements ErrorMapper {
           : 'SESSION_EXPIRED';
       // 403 : « tu existes mais tu n'as pas le droit » ; un quota dépassé est aussi un 403, repérable à son message.
       case 403:
-        return /quota exceeded/i.test(body?.content ?? '') ? 'QUOTA_EXCEEDED' : 'FORBIDDEN';
+        return /quota exceeded|template limit reached/i.test(body?.content ?? '') ? 'QUOTA_EXCEEDED' : 'FORBIDDEN';
       case 429:
         return 'TOO_MANY_ATTEMPTS';
       case 400:
