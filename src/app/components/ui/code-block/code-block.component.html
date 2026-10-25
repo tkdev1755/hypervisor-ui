@@ -6,5 +6,5 @@
       {{ copied() ? 'Copié' : 'Copier' }}
     </button>
   </div>
-  <pre><code>{{ code() }}</code></pre>
+  <pre #pre [style.max-height]="maxHeight() ? maxHeight() + 'px' : null"><code>{{ code() }}</code></pre>
 </div>

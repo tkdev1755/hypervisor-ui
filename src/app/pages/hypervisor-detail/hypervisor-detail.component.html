@@ -9,6 +9,9 @@
       @case ('vms') {
         <app-vm-list [hypervisorId]="hypervisor.id" [hypervisorName]="hypervisor.name" />
       }
+      @case ('templates') {
+        <app-template-list [hypervisorId]="hypervisor.id" [hypervisorName]="hypervisor.name" />
+      }
       @case ('disks') {
         <app-disk-list [hypervisorId]="hypervisor.id" />
       }

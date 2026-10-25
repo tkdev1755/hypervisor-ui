@@ -1,0 +1,30 @@
+<app-modal-shell
+  [title]="'Journal de ' + templateName() + ' · version ' + version()"
+  [state]="state()"
+  [error]="error()"
+  loadingLabel="Chargement du journal…"
+  (retry)="start()"
+>
+  <app-column [gap]="12">
+    <app-row [gap]="12" [wrap]="true">
+      @if (status(); as status) {
+        <app-status-badge [status]="status" />
+      }
+      <app-text variant="small" color="muted">
+        {{ finished() ? 'Construction terminée : le journal est complet.' : 'Construction en cours : le journal se met à jour toutes les 2 secondes.' }}
+      </app-text>
+    </app-row>
+
+    @if (truncated()) {
+      <app-callout type="warning" title="Journal tronqué">
+        La sortie a dépassé 2 Mo : sa fin n'a pas été gardée. La raison d'un échec reste visible dans l'erreur de la version.
+      </app-callout>
+    }
+
+    <app-code-block [code]="content() || '(journal vide pour le moment)'" title="sortie de Packer" [maxHeight]="460" [followEnd]="!finished()" />
+  </app-column>
+
+  <app-row footer [gap]="8">
+    <app-button variant="ghost" (pressed)="modalRef.close()">Fermer</app-button>
+  </app-row>
+</app-modal-shell>

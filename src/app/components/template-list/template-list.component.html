@@ -1,0 +1,51 @@
+<app-column [gap]="16">
+  <app-row [gap]="8">
+    <app-text color="muted">Images prêtes à l'emploi, construites par Packer</app-text>
+    <app-spacer />
+    <app-button variant="ghost" size="sm" icon="refresh" [disabled]="loading()" (pressed)="load()">Actualiser</app-button>
+    @if (auth.isAdmin()) {
+      <app-button size="sm" icon="plus" (pressed)="create()">Créer un template</app-button>
+    }
+  </app-row>
+
+  @if (loading()) {
+    <app-loading label="Chargement des templates…" />
+  } @else if (noAccess()) {
+    <app-empty-state
+      icon="shield"
+      title="Pas d'accès aux templates"
+      message="Il faut l'accès à cet hyperviseur pour utiliser ses templates. Demandez-le à un administrateur."
+    />
+  } @else if (error(); as error) {
+    <app-error-panel [error]="error" [retryable]="true" (retry)="load()" />
+  } @else {
+    <app-grid [minItemWidth]="260">
+      @for (template of list(); track template.id) {
+        <app-resource-card
+          icon="layers"
+          [title]="template.name"
+          [subtitle]="subtitle(template)"
+          [status]="template.status ?? undefined"
+          [meta]="meta(template)"
+          [clickable]="auth.isAdmin()"
+          (tap)="open(template)"
+        >
+          @if (canCreateVm(template)) {
+            <app-button size="sm" icon="plus" (pressed)="createVm(template)">Créer une VM</app-button>
+          }
+          @if (auth.isAdmin()) {
+            <app-button variant="ghost" size="sm" icon="edit" (pressed)="open(template)">Gérer</app-button>
+          }
+        </app-resource-card>
+      } @empty {
+        @if (auth.isAdmin()) {
+          <app-empty-state icon="layers" title="Aucun template" message="Construisez une image avec Packer pour créer ensuite des VM déjà installées.">
+            <app-button icon="plus" (pressed)="create()">Créer un template</app-button>
+          </app-empty-state>
+        } @else {
+          <app-empty-state icon="layers" title="Aucun template" message="Aucun template n'est prêt pour vous sur cet hyperviseur pour le moment." />
+        }
+      }
+    </app-grid>
+  }
+</app-column>

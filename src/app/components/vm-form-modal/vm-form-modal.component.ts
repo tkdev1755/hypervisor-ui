@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
+import { catchError, forkJoin, of } from 'rxjs';
 
 import { ColumnComponent } from '@app/components/layout/column/column.component';
 import { RowComponent } from '@app/components/layout/row/row.component';
@@ -11,14 +12,23 @@ import { NumberFieldComponent } from '@app/components/ui/number-field/number-fie
 import { TextFieldComponent } from '@app/components/ui/text-field/text-field.component';
 import { TextComponent } from '@app/components/ui/text/text.component';
 import { AppError, isAppError } from '@app/models/app-error.model';
+import { CreateVmFromTemplate, Template } from '@app/models/template.model';
 import { VmOptions } from '@app/models/vm-options.model';
 import { CreateVm, DiskSpec, VirtualMachine, VolumeRef } from '@app/models/virtual-machine.model';
 import { AuthService } from '@app/services/auth.service';
+import { JobService } from '@app/services/job.service';
 import { ModalRef } from '@app/services/modal-ref';
+import { TemplateService } from '@app/services/template.service';
 import { VmService } from '@app/services/vm.service';
 import { formatQuotaRow, quotaRows } from '@app/utils/quota';
 
 type Preset = 'small' | 'medium' | 'large';
+/**
+ * D'où vient la VM :
+ *   'blank'    → une VM vierge : on choisit son disque et, en général, une ISO d'installation
+ *   'template' → une copie du disque d'un template prêt (système déjà installé)
+ */
+type Source = 'blank' | 'template';
 /**
  * Comment le disque de la VM est fourni :
  *   'new'      → un nouveau volume, créé dans un pool
@@ -35,10 +45,16 @@ const PRESETS: Record<Preset, { vcpus: number; memory_mb: number }> = {
 };
 
 /**
- * Créer une VM : un nom, un gabarit, un disque (nouveau, existant ou aucun), une ISO facultative,
+ * Créer une VM, vierge ou à partir d'un template.
+ *
+ * VM vierge : un nom, un gabarit, un disque (nouveau, existant ou aucun), une ISO facultative,
  * un réseau et un firmware. Les choix (pools, volumes, réseaux, limites) viennent de l'API (`vm-options`) :
  * la modale les charge à son ouverture. Un administrateur peut aussi désigner le propriétaire de la VM,
  * et le quota de l'utilisateur est rappelé en haut du formulaire.
+ *
+ * À partir d'un template : pas de disque ni d'ISO à choisir, la VM reçoit une copie du disque de
+ * sa dernière version prête (pour choisir une autre version : l'onglet Templates). L'API répond alors avec une tâche (« job ») : la modale reste en chargement jusqu'à la
+ * fin de la copie (comme le clonage). Le choix « Template » n'apparaît que s'il y a un template prêt.
  */
 @Component({
   selector: 'app-vm-form-modal',
@@ -60,6 +76,8 @@ const PRESETS: Record<Preset, { vcpus: number; memory_mb: number }> = {
 export class VmFormModalComponent implements OnInit {
   protected readonly modalRef = inject(ModalRef<VirtualMachine>);
   private readonly vms = inject(VmService);
+  private readonly templateService = inject(TemplateService);
+  private readonly jobs = inject(JobService);
   protected readonly auth = inject(AuthService);
 
   readonly hypervisorId = input.required<string>();
@@ -67,6 +85,11 @@ export class VmFormModalComponent implements OnInit {
 
   /** Les choix proposés par l'API ; null tant qu'ils ne sont pas chargés. */
   protected readonly options = signal<VmOptions | null>(null);
+
+  /** Les templates prêts de l'hyperviseur (vide s'il n'y en a pas, ou si leur chargement a échoué). */
+  protected readonly templates = signal<Template[]>([]);
+  protected readonly source = signal<Source>('blank');
+  protected readonly templateId = signal<string | undefined>(undefined);
 
   protected readonly name = signal('');
   protected readonly vcpus = signal(PRESETS.medium.vcpus);
@@ -117,6 +140,17 @@ export class VmFormModalComponent implements OnInit {
     { value: 'existing', label: 'Volume existant', description: 'Attacher un disque existant' },
     { value: 'none', label: 'Sans disque', description: 'Pour Live ISO uniquement' },
   ];
+
+  protected readonly sourceChoices: Choice<Source>[] = [
+    { value: 'blank', label: 'VM vierge', description: 'Disque et ISO au choix' },
+    { value: 'template', label: 'Template', description: 'Système déjà installé' },
+  ];
+
+  protected readonly templateChoices = computed<Choice<string>[]>(() =>
+    this.templates().map((t) => ({ value: t.id, label: t.name, description: `Version ${t.default_version} · pool ${t.pool}` })),
+  );
+
+  protected readonly selectedTemplate = computed(() => this.templates().find((t) => t.id === this.templateId()));
 
   protected readonly startChoices: Choice<boolean>[] = [
     { value: false, label: 'Non', description: 'La VM reste arrêtée' },
@@ -203,8 +237,12 @@ export class VmFormModalComponent implements OnInit {
       : null;
   });
 
+  protected readonly templateError = computed(() =>
+    this.submitted() && this.source() === 'template' && !this.selectedTemplate() ? 'Choisissez un template.' : null,
+  );
+
   protected readonly diskError = computed(() => {
-    if (!this.submitted()) {
+    if (!this.submitted() || this.source() === 'template') {
       return null;
     }
     const mode = this.diskMode();
@@ -240,7 +278,7 @@ export class VmFormModalComponent implements OnInit {
   });
 
   protected readonly poolError = computed(() => {
-    if (this.submitted() && this.diskMode() !== 'none' && !this.pool()) {
+    if (this.submitted() && this.source() === 'blank' && this.diskMode() !== 'none' && !this.pool()) {
       return 'Aucun pool de stockage disponible.';
     }
     return null;
@@ -259,8 +297,16 @@ export class VmFormModalComponent implements OnInit {
   protected loadOptions(): void {
     this.loadingLabel.set('Chargement des options…');
     this.state.set('loading');
-    this.vms.options(this.hypervisorId()).subscribe({
-      next: (options) => {
+    // Les options et les templates en parallèle ; sans templates (erreur), on propose seulement une VM vierge.
+    forkJoin({
+      options: this.vms.options(this.hypervisorId()),
+      templates: this.templateService.list(this.hypervisorId()).pipe(catchError(() => of([] as Template[]))),
+    }).subscribe({
+      next: ({ options, templates }) => {
+        // Un template est utilisable s'il a une version prête (même si une reconstruction est en cours).
+        const ready = templates.filter((t) => t.default_version !== null && t.default_version !== undefined);
+        this.templates.set(ready);
+        this.templateId.set(ready[0]?.id);
         this.options.set(options);
         this.vcpus.set(options.defaults.vcpus);
         this.memoryMb.set(options.defaults.memory_mb);
@@ -297,8 +343,14 @@ export class VmFormModalComponent implements OnInit {
       this.nameError() ||
       this.diskError() ||
       this.resourcesError() ||
-      this.poolError()
+      this.poolError() ||
+      this.templateError()
     ) {
+      return;
+    }
+
+    if (this.source() === 'template') {
+      this.submitFromTemplate();
       return;
     }
 
@@ -332,6 +384,56 @@ export class VmFormModalComponent implements OnInit {
       error: (error: unknown) => {
         this.fail(error);
       },
+    });
+  }
+
+  /** La VM est créée à partir du template choisi : l'API copie son disque dans une tâche de fond. */
+  private submitFromTemplate(): void {
+    const template = this.selectedTemplate();
+    if (!template) {
+      return;
+    }
+    const body: CreateVmFromTemplate = {
+      name: this.name().trim(),
+      memory_mb: this.memoryMb(),
+      vcpus: this.vcpus(),
+      network: this.network(),
+      firmware: this.firmware(),
+      start: this.start(),
+      ...(this.auth.isAdmin() && this.ownerId() ? { owner_id: this.ownerId() } : {}),
+    };
+    this.loadingLabel.set('Copie du disque du template, cela peut prendre quelques minutes…');
+    this.state.set('loading');
+    this.templateService.createVm(this.hypervisorId(), template.id, body).subscribe({
+      next: (job) => this.followJob(job.id),
+      error: (error: unknown) => this.fail(error),
+    });
+  }
+
+  /** Interroge la tâche jusqu'à sa fin (voir JobService.watch). */
+  private followJob(jobId: string): void {
+    this.jobs.watch(jobId).subscribe({
+      next: (job) => {
+        if (job.status === 'succeeded') {
+          this.result.set(job.result ?? null);
+          this.state.set('success');
+        } else {
+          // La tâche a échoué : on fabrique une erreur à partir de sa raison.
+          this.error.set({
+            kind: 'technical',
+            api: 'hypervisor-api',
+            method: 'POST',
+            endpoint: 'templates/vms',
+            status: 0,
+            title: 'La création a échoué',
+            message: "L'hyperviseur n'a pas pu créer la machine virtuelle à partir du template.",
+            detail: job.error,
+            occurredAt: new Date(),
+          });
+          this.state.set('error');
+        }
+      },
+      error: (error: unknown) => this.fail(error),
     });
   }
 

@@ -14,6 +14,13 @@ const STATUSES: Record<string, { label: string; tone: Tone }> = {
   crashed: { label: 'Planté', tone: 'danger' },
   active: { label: 'Actif', tone: 'success' },
   inactive: { label: 'Inactif', tone: 'neutral' },
+  // Versions de templates : la construction par Packer.
+  pending: { label: 'En attente', tone: 'warning' },
+  in_progress: { label: 'En construction', tone: 'warning' },
+  stopping: { label: 'Arrêt en cours', tone: 'warning' },
+  created: { label: 'Prêt', tone: 'success' },
+  failed: { label: 'Échec', tone: 'danger' },
+  cancelled: { label: 'Annulé', tone: 'neutral' },
 };
 
 /**

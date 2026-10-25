@@ -2,7 +2,7 @@ import { VirtualMachine } from './virtual-machine.model';
 
 export type JobStatus = 'running' | 'succeeded' | 'failed';
 
-/** Une opération longue (clonage) exécutée en arrière-plan par l'API. */
+/** Une opération longue (clonage, VM depuis un template) exécutée en arrière-plan par l'API. */
 export interface Job {
   id: string;
   kind: string;

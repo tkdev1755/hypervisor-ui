@@ -5,7 +5,7 @@ import { Observable, filter, switchMap, take, timer } from 'rxjs';
 import { Job } from '../models/job.model';
 import { apiContext } from '../utils/api-context';
 
-/** Les tâches de fond de l'API (aujourd'hui : le clonage de VM). */
+/** Les tâches de fond de l'API (clonage de VM, création d'une VM depuis un template). */
 @Injectable({ providedIn: 'root' })
 export class JobService {
   private readonly http = inject(HttpClient);

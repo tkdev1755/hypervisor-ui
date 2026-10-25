@@ -74,7 +74,7 @@ npx ng build            # DOIT finir sans erreur NI avertissement
 ```text
 src/app/
 ├── app.component.*, app.config.ts, app.routes.ts
-├── pages/                home, login, account, learn, hypervisor-list, hypervisor-detail, vm-detail,
+├── pages/                home, login, account, learn, hypervisor-list, hypervisor-detail, vm-detail, template-detail,
 │                         admin-users, admin-audit, not-found
 ├── components/
 │   ├── layout/           column, row, padding, sized-box, center, expanded, spacer, grid, card, divider, page
@@ -85,9 +85,11 @@ src/app/
 │   ├── shell/            barre latérale (+ sidebar-inventory : arbre hyperviseurs → VM) + <router-outlet>
 │   └── hypervisor-form-modal, vm-form-modal, vm-clone-modal, vm-delete-modal, vm-console-modal,
 │       vm-share-modal, vm-owner-modal, vm-list, disk-list, network-list,
+│       template-list, template-form-modal, template-delete-modal, template-vm-modal, template-log-modal,
+│       template-access-list + template-access-modal,
 │       hypervisor-access-list + hypervisor-access-modal, user-picker,
 │       user-form-modal, user-quota-modal, user-password-modal, password-form-modal   (composants métier)
-├── services/             auth (session, jetons), hypervisor, vm, share (prêts), user, admin (réglages, audit, accès),
+├── services/             auth (session, jetons), hypervisor, vm, template, share (prêts), user, admin (réglages, audit, accès),
 │                         job, inventory (arbre de la barre latérale), infrastructure (API), modal (+ modal-ref), context-bridge
 ├── models/               types recopiés de src/models.rs de l'API, et app-error.model.ts
 ├── interceptors/         auth.interceptor.ts (jeton + refresh), error.interceptor.ts
@@ -95,7 +97,8 @@ src/app/
 ├── errors/               error-mapper.ts (contrat + token), hypervisor-api-error-mapper.ts (catalogue FR)
 ├── config/               context-descriptors.ts
 └── utils/                api-context.ts (étiquette HTTP par API), layout.ts (alignements),
-                          vm-access.ts (droits sur une VM), quota.ts (lignes de quota)
+                          vm-access.ts (droits sur une VM), quota.ts (lignes de quota),
+                          packer-example.ts (exemple Debian 12, lecture de vm_name)
 src/styles/               _tokens.scss (variables), _bootstrap.scss (Bootstrap configuré), _base.scss
 mock-api/server.mjs       fausse API Node sans dépendance
 ```
@@ -186,6 +189,21 @@ mainteneur a conçue en entreprise. Respectez leur contrat.
   dépendant de l'utilisateur doit y être vidé aussi.
 - `VirtualMachine.owner` / `access` (`'admin' | 'owner' | 'shared'`) pilotent l'affichage
   (`utils/vm-access.ts`) : une VM prêtée n'offre que console, démarrer, arrêter, « Rendre ».
+- **Templates** (`templates.rs` de l'API) : une définition modifiable (configuration Packer, disque, pool,
+  visibilité) et des **versions** numérotées (une par construction, chacune avec son disque, son état et son
+  journal). Seul un admin crée, modifie (PATCH : les versions existantes ne changent pas, il faut
+  « Reconstruire »), reconstruit, arrête (`stop`, puis `stop?force=true`), supprime un template ou une
+  version, lit les journaux et gère les accès : tout cela sur la page `template-detail` (`adminGuard`).
+  Un utilisateur **avec l'accès** à l'hyperviseur voit les templates qui ont une version prête et qui lui sont
+  ouverts (`visibility: 'hypervisor'`, ou `'restricted'` + listé dans `…/access`), sans configuration, journal
+  ni erreur (403 sans accès : `template-list` l'explique). `status` / `latest_version` décrivent la dernière
+  version ; on crée une VM depuis `default_version` (la dernière **prête**), même pendant une reconstruction.
+  Asynchrone partout : la liste se recharge toutes les 5 s et la page toutes les 3 s pendant une construction ;
+  le journal se lit par morceaux (`offset` = `next_offset` précédent) toutes les 2 s ; la création de VM suit
+  sa tâche (`JobService.watch`), depuis l'onglet Templates, la page du template (choix de la version) ou
+  « Créer une VM » (source « Template », dernière version prête). Les 409 ont des causes variées :
+  leur texte français vient de `TEMPLATE_MESSAGES` dans le mapper. Ne lancez **aucune** construction sur la
+  vraie API sans accord (elle installe un OS sur l'hyperviseur) : `npm run mock:full` la simule.
 - La suppression de réseau est **masquée** (la vraie API n'a pas de `DELETE …/networks/{id}`) :
   `NetworkDeleteModalComponent` et `deleteNetwork` existent, à rebrancher quand la route existera.
 

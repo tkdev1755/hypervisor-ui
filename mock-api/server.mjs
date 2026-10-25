@@ -4,8 +4,13 @@
 //   npm run mock        se comporte comme la vraie API sans hyperviseur réel :
 //                       authentification, hyperviseurs et utilisateurs OK, mais
 //                       VM / disques / réseaux en 501.
-//   npm run mock:full   renvoie aussi des VM, disques et réseaux d'exemple,
+//   npm run mock:full   renvoie aussi des VM, disques, réseaux et templates d'exemple,
 //                       pour construire les écrans avant que l'API soit prête.
+//
+// TEMPLATES (mode full) : chaque construction crée une version. Une « construction Packer » dure
+//   ~12 s (2 s en attente, puis un journal qui se remplit chaque seconde). Une configuration qui
+//   contient le mot « fail » échoue, pour voir l'affichage de l'erreur. « debian-12 » a deux versions
+//   prêtes ; « ubuntu-24 » est restreint (alice y a accès) et sa version 2 a raté.
 //
 // Mêmes routes, même port (3000) et même format d'erreur { status, content }
 // que l'API Rust. Les données sont en mémoire : elles disparaissent à l'arrêt.
@@ -39,6 +44,7 @@ const vms = new Map(); // hypervisorId -> VM[] ; chaque VM garde owner_id (inter
 const networks = new Map(); // hypervisorId -> Network[]
 const disks = new Map(); // hypervisorId -> Disk[]
 const access = new Map(); // hypervisorId -> Map(userId -> created_at) : qui peut y créer des VM
+const templates = new Map(); // hypervisorId -> Template[] ; chaque template garde versions[] et access (Map userId -> date)
 
 const users = new Map(); // userId -> { id, username, password, role, disabled, created_at, quota }
 const accessTokens = new Map(); // jeton -> { userId, expires }
@@ -67,6 +73,7 @@ function addHypervisor(name, uri) {
     { id: 'n1', hypervisor_id: hypervisor.id, name: 'default', bridge: 'virbr0', status: 'active' },
     { id: 'n2', hypervisor_id: hypervisor.id, name: 'isolated', bridge: null, status: 'inactive' },
   ]);
+  templates.set(hypervisor.id, []);
   disks.set(hypervisor.id, [
     { id: 'd1', hypervisor_id: hypervisor.id, name: 'web-01.qcow2', size_gb: 20, format: 'qcow2' },
     { id: 'd2', hypervisor_id: hypervisor.id, name: 'db-01.raw', size_gb: 100, format: 'raw' },
@@ -84,6 +91,26 @@ access.get(local.id).set(alice.id, now());
 addVm(local.id, 'web-01', 4096, 2, 'running', alice);
 addVm(local.id, 'db-01', 8192, 4, 'stopped', null); // créée « hors de l'API » : sans propriétaire
 const bobVm = addVm(local.id, 'bob-vm', 2048, 1, 'stopped', bob);
+function addTemplate(hypervisorId, name, visibility, versionStates) {
+  const config = `source "qemu" "${name}" {\n  vm_name = "${name}.qcow2"\n}\n`;
+  const template = {
+    id: randomUUID(), hypervisor_id: hypervisorId, name, packer_config: config, disk_name: `${name}.qcow2`, pool: 'default',
+    visibility, created_at: now() - 86400, updated_at: now() - 86400, versions: [], access: new Map(),
+  };
+  versionStates.forEach((status, index) => {
+    template.versions.push({
+      template_id: template.id, version: index + 1, packer_config: config, disk_name: template.disk_name, pool: 'default',
+      volume: `template-${name}-v${index + 1}.qcow2`, status, disk_size_gb: status === 'created' ? 10 : null,
+      error: status === 'failed' ? "Build 'qemu.ubuntu' errored after 2 minutes: Timeout waiting for SSH." : null,
+      log: `==> qemu.${name}: Downloading ISO...\n==> qemu.${name}: Starting VM...\n` + (status === 'failed' ? "Build 'qemu.ubuntu' errored after 2 minutes: Timeout waiting for SSH.\n" : '==> upload done\n'),
+      created_at: now() - 86400 + index * 3600, started_at: now() - 86400 + index * 3600, finished_at: now() - 86000 + index * 3600,
+    });
+  });
+  templates.get(hypervisorId).push(template);
+  return template;
+}
+addTemplate(local.id, 'debian-12', 'hypervisor', ['created', 'created']);
+addTemplate(local.id, 'ubuntu-24', 'restricted', ['created', 'failed']).access.set(alice.id, now());
 bobVm.shares.push({ user_id: alice.id, username: 'alice', created_at: now(), expires_at: null });
 
 // --- Réponses ---------------------------------------------------------------
@@ -457,6 +484,12 @@ async function handleHypervisors(req, res, parts, method, url, user, { forbidden
     return handleVms(req, res, { id, resource, subId, action, extra, method, url, user, forbidden });
   }
 
+  // Templates : les admins voient tout ; un utilisateur doit avoir l'accès à l'hyperviseur (sinon 403).
+  if (resource === 'templates') {
+    if (!FULL) return notImplemented(res, `${resource} ${method}`);
+    return handleTemplates(req, res, { id, subId, action, extra, method, url, user, forbidden });
+  }
+
   // Disques, pools, réseaux (déjà réservés aux admins plus haut).
   if (resource === 'disks' || resource === 'networks' || resource === 'pools') {
     if (!FULL) return notImplemented(res, `${resource} ${method}`);
@@ -594,6 +627,247 @@ async function handleVms(req, res, { id, resource, subId, action, extra, method,
     return send(res, 204);
   }
   return notImplemented(res, `vms ${method}`);
+}
+
+// --- Templates (comme templates.rs) ---------------------------------------------------
+const NAME_PATTERN = /^[a-zA-Z0-9_-][a-zA-Z0-9._-]{0,63}$/;
+const BUILDING = ['pending', 'in_progress', 'stopping'];
+const builtVersions = (template) => template.versions.filter((v) => v.status === 'created');
+const runningBuild = (template) => template.versions.find((v) => BUILDING.includes(v.status));
+
+/** Un utilisateur ne voit que les templates ouverts à lui ET qui ont une version prête. */
+function canUseTemplate(template, user) {
+  if (isAdmin(user)) return true;
+  const open = template.visibility === 'hypervisor' || template.access.has(user.id);
+  return open && builtVersions(template).length > 0;
+}
+/** Sans la configuration ni l'erreur (et sans le journal, interne) pour un utilisateur. */
+function versionView(version, user) {
+  const { log, timers, ...rest } = version;
+  if (isAdmin(user)) return rest;
+  const { packer_config, error, ...visible } = rest;
+  return visible;
+}
+function templateView(template, user) {
+  const { versions, access: granted, ...rest } = template;
+  const shown = isAdmin(user) ? versions : builtVersions(template);
+  const latest = shown[shown.length - 1] ?? null;
+  const built = builtVersions(template);
+  const view = {
+    ...rest,
+    status: latest?.status ?? null,
+    default_version: built.length ? built[built.length - 1].version : null,
+    latest_version: latest ? versionView(latest, user) : null,
+  };
+  if (!isAdmin(user)) delete view.packer_config;
+  return view;
+}
+
+/** La « construction Packer » d'une nouvelle version : 2 s d'attente, puis 10 lignes de journal. */
+function startBuild(template, user) {
+  const number = (template.versions[template.versions.length - 1]?.version ?? 0) + 1;
+  const version = {
+    template_id: template.id, version: number, packer_config: template.packer_config, disk_name: template.disk_name, pool: template.pool,
+    volume: `template-${template.name}-v${number}.qcow2`, status: 'pending', disk_size_gb: null, error: null, log: '',
+    created_at: now(), started_at: null, finished_at: null, timers: [],
+  };
+  template.versions.push(version);
+  const steps = ['packer init', 'packer build', 'Downloading ISO', 'Creating VM', 'Waiting for SSH', 'Connected to SSH', 'Provisioning with shell script', 'apt-get upgrade', 'Gracefully halting VM', 'Converting disk'];
+  version.timers.push(setTimeout(() => Object.assign(version, { status: 'in_progress', started_at: now() }), 2000));
+  steps.forEach((step, index) => {
+    version.timers.push(setTimeout(() => (version.log += `==> qemu.${template.name}: ${step}...\n`), 2500 + index * 1000));
+  });
+  version.timers.push(setTimeout(() => {
+    if (template.packer_config.includes('fail')) {
+      const error = `==> qemu.${template.name}: Error launching VM: Qemu failed to start.\nBuild finished with errors.`;
+      version.log += error + '\n';
+      Object.assign(version, { status: 'failed', error, finished_at: now() });
+    } else {
+      version.log += `==> upload to ${version.pool}/${version.volume}\n`;
+      Object.assign(version, { status: 'created', disk_size_gb: 10, finished_at: now() });
+    }
+  }, 13000));
+  logAudit(user, 'template.rebuild', `${template.hypervisor_id}/${template.id}`, `version ${number}`);
+  return version;
+}
+
+/** Arrêter : l'arrêt propre prend 2 s (« stopping »), l'arrêt forcé est immédiat. */
+function stopBuild(version, force) {
+  version.timers.forEach(clearTimeout);
+  version.timers = [];
+  const finish = () => {
+    version.log += '==> Build cancelled by an administrator\n';
+    Object.assign(version, { status: 'cancelled', finished_at: now() });
+  };
+  if (force) return finish();
+  version.status = 'stopping';
+  version.log += '==> Interrupt received. Cleaning up...\n';
+  version.timers.push(setTimeout(finish, 2000));
+}
+
+/** Vérifie la définition d'un template (POST ou PATCH) ; renvoie le message d'erreur de l'API, ou null. */
+function templateProblem(definition) {
+  if (!NAME_PATTERN.test(definition.name ?? '')) return "name must be 1-64 characters: letters, digits, '-', '_' or '.' (not leading)";
+  if (!NAME_PATTERN.test(definition.disk_name ?? '')) return "disk_name must be the file name of the disk Packer writes: 1-64 characters, letters, digits, '-', '_' or '.' (not leading)";
+  if (!String(definition.packer_config ?? '').trim()) return 'packer_config must be a non-empty text of at most 65536 bytes';
+  if (definition.visibility && !['hypervisor', 'restricted'].includes(definition.visibility)) return 'Invalid visibility';
+  return null;
+}
+
+async function handleTemplates(req, res, { id, subId, action, extra, method, url, user, forbidden }) {
+  if (!canCreateVm(id, user)) return forbidden('No access to this hypervisor');
+  const list = templates.get(id) ?? [];
+  const admin = isAdmin(user);
+
+  if (!subId && method === 'GET') {
+    return send(res, 200, list.filter((t) => canUseTemplate(t, user)).sort((a, b) => a.name.localeCompare(b.name)).map((t) => templateView(t, user)));
+  }
+  if (!subId && method === 'POST') {
+    if (!admin) return forbidden();
+    const body = await readJson(req);
+    if (!body) return malformed(res);
+    const problem = templateProblem(body);
+    if (problem) return err(res, 400, problem);
+    if (list.some((t) => t.name === body.name)) return err(res, 409, 'A template with this name already exists on this hypervisor');
+    const template = {
+      id: randomUUID(), hypervisor_id: id, name: body.name, packer_config: body.packer_config, disk_name: body.disk_name,
+      pool: body.pool ?? 'default', visibility: body.visibility ?? 'hypervisor', created_at: now(), updated_at: now(), versions: [], access: new Map(),
+    };
+    list.push(template);
+    logAudit(user, 'template.create', `${id}/${template.id}`, body.name);
+    startBuild(template, user);
+    res.setHeader('Location', `/api/hypervisors/${id}/templates/${template.id}`);
+    return send(res, 202, templateView(template, user));
+  }
+
+  const template = list.find((t) => t.id === subId && canUseTemplate(t, user));
+  if (!template) return err(res, 404, 'Template not found');
+
+  if (!action) {
+    if (method === 'GET') return send(res, 200, templateView(template, user));
+    if (!admin) return forbidden();
+    if (method === 'PATCH') {
+      const body = await readJson(req);
+      if (!body) return malformed(res);
+      const next = {
+        name: body.name ?? template.name, packer_config: body.packer_config ?? template.packer_config,
+        disk_name: body.disk_name ?? template.disk_name, pool: body.pool ?? template.pool, visibility: body.visibility ?? template.visibility,
+      };
+      const problem = templateProblem(next);
+      if (problem) return err(res, 400, problem);
+      if (list.some((t) => t.id !== template.id && t.name === next.name)) return err(res, 409, 'A template with this name already exists on this hypervisor');
+      Object.assign(template, next, { updated_at: now() });
+      logAudit(user, 'template.update', `${id}/${template.id}`, template.name);
+      return send(res, 200, templateView(template, user));
+    }
+    if (method === 'DELETE') {
+      if (runningBuild(template)) return err(res, 409, 'The template is being built: stop the build first');
+      templates.set(id, list.filter((t) => t.id !== template.id));
+      logAudit(user, 'template.delete', `${id}/${template.id}`, template.name);
+      return send(res, 204);
+    }
+  }
+
+  if (action === 'versions') {
+    if (!extra) {
+      if (method === 'GET') {
+        const shown = admin ? template.versions : builtVersions(template);
+        return send(res, 200, [...shown].reverse().map((v) => versionView(v, user)));
+      }
+      if (method === 'POST') {
+        if (!admin) return forbidden();
+        if (runningBuild(template)) return err(res, 409, 'A build of this template is already running');
+        const version = startBuild(template, user);
+        res.setHeader('Location', `/api/hypervisors/${id}/templates/${template.id}/versions/${version.version}`);
+        return send(res, 202, versionView(version, user));
+      }
+    }
+    const [, , , , , , number, logs] = url.pathname.split('/').filter(Boolean);
+    const version = template.versions.find((v) => String(v.version) === number && (admin || v.status === 'created'));
+    if (!version) return err(res, 404, 'Template version not found');
+    if (logs === 'logs' && method === 'GET') {
+      if (!admin) return forbidden();
+      const offset = Number(url.searchParams.get('offset') ?? 0);
+      if (!Number.isInteger(offset) || offset < 0 || offset > version.log.length) return err(res, 400, 'Invalid offset: use the next_offset of a previous call');
+      return send(res, 200, {
+        template_id: template.id, version: version.version, status: version.status, finished: !BUILDING.includes(version.status),
+        offset, next_offset: version.log.length, content: version.log.slice(offset), truncated: false,
+      });
+    }
+    if (!logs && method === 'GET') return send(res, 200, versionView(version, user));
+    if (!logs && method === 'DELETE') {
+      if (!admin) return forbidden();
+      if (BUILDING.includes(version.status)) return err(res, 409, 'This version is being built: stop the build first');
+      template.versions = template.versions.filter((v) => v !== version);
+      logAudit(user, 'template.version_delete', `${id}/${template.id}`, `version ${version.version}`);
+      return send(res, 204);
+    }
+  }
+
+  if (action === 'stop' && method === 'POST') {
+    if (!admin) return forbidden();
+    const version = runningBuild(template);
+    if (!version) return err(res, 409, 'No build of this template is running');
+    const force = url.searchParams.get('force') === 'true';
+    stopBuild(version, force);
+    logAudit(user, force ? 'template.stop_force' : 'template.stop', `${id}/${template.id}`, `version ${version.version}`);
+    res.setHeader('Location', `/api/hypervisors/${id}/templates/${template.id}/versions/${version.version}`);
+    return send(res, 202, versionView(version, user));
+  }
+
+  if (action === 'access') {
+    if (!admin) return forbidden();
+    if (!extra && method === 'GET') {
+      const entries = [...template.access].map(([userId, created_at]) => ({ user_id: userId, username: users.get(userId)?.username, created_at }));
+      return send(res, 200, entries.sort((a, b) => a.username.localeCompare(b.username)));
+    }
+    if (extra && method === 'PUT') {
+      if (!users.has(extra)) return err(res, 404, 'User not found');
+      if (!template.access.has(extra)) template.access.set(extra, now());
+      logAudit(user, 'template.grant', `${id}/${template.id}`, extra);
+      return send(res, 204);
+    }
+    if (extra && method === 'DELETE') {
+      if (!template.access.delete(extra)) return err(res, 404, 'Access not found');
+      logAudit(user, 'template.revoke', `${id}/${template.id}`, extra);
+      return send(res, 204);
+    }
+  }
+
+  if (action === 'vms' && method === 'POST') {
+    const body = await readJson(req);
+    if (!body?.name || !Number.isInteger(body.memory_mb) || !Number.isInteger(body.vcpus)) return malformed(res);
+    const built = builtVersions(template);
+    let version;
+    if (body.version !== undefined && body.version !== null) {
+      version = template.versions.find((v) => v.version === body.version && (admin || v.status === 'created'));
+      if (!version) return err(res, 404, 'Template version not found');
+      if (version.status !== 'created') return err(res, 409, 'This version of the template is not built');
+    } else {
+      version = built[built.length - 1];
+      if (!version) return err(res, 409, 'The template has no built version yet');
+    }
+    if (!NAME_PATTERN.test(body.name)) return err(res, 400, 'Invalid VM name');
+    if (body.owner_id && !admin) return forbidden();
+    const owner = body.owner_id ? users.get(body.owner_id) : user;
+    if (!owner) return err(res, 404, 'Owner not found');
+    if ((vms.get(id) ?? []).some((vm) => vm.name === body.name)) return err(res, 409, 'A VM with this name already exists');
+    if (body.network === 'isolated') return err(res, 409, 'The network is not active');
+    const violation = quotaViolation(owner, { vcpus: body.vcpus, memory_mb: body.memory_mb, disk_gb: version.disk_size_gb ?? 0 });
+    if (violation) return forbidden(violation);
+    const job = { id: randomUUID(), kind: 'template_vm', status: 'running', owner_id: owner.id };
+    jobs.set(job.id, job);
+    logAudit(user, 'template.vm_create', `${id}/${template.id}`, `${body.name} (version ${version.version})`);
+    // La « copie du disque » dure 3 secondes.
+    setTimeout(() => {
+      const vm = addVm(id, body.name, body.memory_mb, body.vcpus, body.start ? 'running' : 'stopped', owner);
+      Object.assign(job, { status: 'succeeded', result: vmView(vm, user) });
+    }, 3000);
+    res.setHeader('Location', `/api/jobs/${job.id}`);
+    const { owner_id, ...shown } = job;
+    return send(res, 202, shown);
+  }
+  return err(res, 404, 'Route not found');
 }
 
 async function handleInfrastructure(req, res, { id, resource, subId, method }) {

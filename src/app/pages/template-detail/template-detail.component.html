@@ -1,0 +1,106 @@
+@if (template(); as template) {
+  <app-page
+    [backLink]="'/hypervisors/' + id()"
+    [backLabel]="hypervisor()?.name ?? 'Hyperviseur'"
+    eyebrow="Template"
+    [title]="template.name"
+    [subtitle]="'pool ' + template.pool + (template.visibility === 'restricted' ? ' · accès restreint' : '')"
+  >
+    @if (template.status; as status) {
+      <app-status-badge actions [status]="status" />
+    }
+    <ng-container actions>
+      @if (template.default_version) {
+        <app-button icon="plus" (pressed)="createVm(template)">Créer une VM</app-button>
+      }
+      @if (building()) {
+        <app-button variant="danger-ghost" icon="stop" (pressed)="stop(template)">{{ stopping() ? 'Forcer l’arrêt' : 'Arrêter la construction' }}</app-button>
+      } @else {
+        <app-button variant="ghost" icon="refresh" (pressed)="rebuild(template)">Reconstruire</app-button>
+      }
+      <app-button variant="ghost" icon="edit" (pressed)="edit(template)">Modifier</app-button>
+      @if (!building()) {
+        <app-button variant="danger-ghost" icon="trash" (pressed)="remove(template)">Supprimer</app-button>
+      }
+    </ng-container>
+
+    @if (error(); as error) {
+      <app-error-panel [error]="error" [retryable]="true" (retry)="load()" />
+    }
+
+    @if (outdated() && !building()) {
+      <app-callout type="warning" title="La définition a changé depuis la dernière version">
+        Les VM sont toujours créées à partir des versions déjà construites. Reconstruisez le template pour appliquer les modifications.
+      </app-callout>
+    }
+
+    <app-grid [minItemWidth]="200">
+      <app-card>
+        <app-column [gap]="4">
+          <app-text variant="eyebrow">Version utilisée pour les VM</app-text>
+          <app-text variant="title">{{ template.default_version ? 'v' + template.default_version : 'Aucune' }}</app-text>
+        </app-column>
+      </app-card>
+      <app-card>
+        <app-column [gap]="4">
+          <app-text variant="eyebrow">Dernière version</app-text>
+          <app-text variant="title">{{ template.latest_version ? 'v' + template.latest_version.version : '—' }}</app-text>
+        </app-column>
+      </app-card>
+      <app-card>
+        <app-column [gap]="4">
+          <app-text variant="eyebrow">Fichier disque</app-text>
+          <app-text variant="title">{{ template.disk_name }}</app-text>
+        </app-column>
+      </app-card>
+    </app-grid>
+
+    <app-tabs [tabs]="onglets" [(active)]="onglet" />
+
+    @switch (onglet()) {
+      @case ('versions') {
+        @if (versions().length === 0) {
+          <app-empty-state icon="layers" title="Aucune version" message="Lancez une construction avec « Reconstruire »." />
+        } @else {
+          <app-list>
+            @for (version of versions(); track version.version) {
+              <app-list-tile icon="layers" [title]="'Version ' + version.version" [subtitle]="versionSubtitle(version)" [status]="version.status">
+                <app-button variant="ghost" size="sm" icon="terminal" (pressed)="logs(template, version)">Journal</app-button>
+                @if (version.status === 'created') {
+                  <app-button variant="ghost" size="sm" icon="plus" (pressed)="createVm(template, version)">Créer une VM</app-button>
+                }
+                @if (!isBuilding(version)) {
+                  <app-button variant="danger-ghost" size="sm" icon="trash" (pressed)="removeVersion(template, version)">Supprimer</app-button>
+                }
+              </app-list-tile>
+            }
+          </app-list>
+          @if (latestFailure(); as failure) {
+            <app-column [gap]="6">
+              <app-text variant="small" weight="medium" color="danger">Pourquoi la version {{ failure.version }} a raté (fin de la sortie)</app-text>
+              <app-code-block [code]="failure.error ?? ''" title="erreur de construction" [maxHeight]="240" />
+            </app-column>
+          }
+        }
+      }
+      @case ('config') {
+        <app-column [gap]="12">
+          <app-text color="muted">
+            La définition actuelle, utilisée par la prochaine construction. Visibilité :
+            {{ template.visibility === 'restricted' ? 'restreinte aux utilisateurs choisis' : "tous les utilisateurs qui ont l'accès à l'hyperviseur" }}.
+          </app-text>
+          <app-code-block [code]="template.packer_config ?? ''" title="configuration Packer" [maxHeight]="520" />
+        </app-column>
+      }
+      @case ('access') {
+        <app-template-access-list [hypervisorId]="id()" [templateId]="template.id" [visibility]="template.visibility" />
+      }
+    }
+  </app-page>
+} @else if (error(); as error) {
+  <app-page [backLink]="'/hypervisors/' + id()" backLabel="Hyperviseur" title="Template">
+    <app-error-panel [error]="error" [retryable]="true" (retry)="load()" />
+  </app-page>
+} @else {
+  <app-loading label="Chargement du template…" />
+}

@@ -1,0 +1,74 @@
+<app-modal-shell
+  title="Créer une VM depuis un template"
+  [subtitle]="'À partir de ' + template().name"
+  [state]="state()"
+  [error]="error()"
+  [loadingLabel]="loadingLabel()"
+  successMessage="Machine virtuelle créée."
+  (retry)="retry()"
+  (done)="modalRef.close(result() ?? undefined)"
+>
+  <app-column [gap]="16">
+    @if (quotaSummary(); as summary) {
+      <app-callout title="Votre quota">{{ summary }}</app-callout>
+    }
+    <app-text-field label="Nom" [placeholder]="template().name + '-01'" [(value)]="name" [error]="nameError()" (enter)="submit()" />
+
+    <app-column [gap]="6">
+      <app-text variant="small" weight="medium">Version</app-text>
+      <app-text variant="small" color="muted">
+        La VM reçoit une copie complète du disque de la version choisie, indépendante du template. Sa taille compte dans le quota.
+      </app-text>
+      <app-choice-cards label="Version" [columns]="2" [options]="versionChoices()" [(value)]="selectedVersion" />
+      @if (versionError(); as versionError) {
+        <app-text variant="small" color="danger">{{ versionError }}</app-text>
+      }
+    </app-column>
+
+    <app-column [gap]="6">
+      <app-row [gap]="24" [wrap]="true">
+        <app-number-field label="vCPU" [(value)]="vcpus" [min]="options()?.limits?.vcpus?.min ?? 1" [max]="options()?.limits?.vcpus?.max ?? 64" />
+        <app-number-field
+          label="Mémoire"
+          unit="Mo"
+          [(value)]="memoryMb"
+          [step]="256"
+          [min]="options()?.limits?.memory_mb?.min ?? 128"
+          [max]="options()?.limits?.memory_mb?.max ?? 262144"
+        />
+      </app-row>
+      @if (resourcesError(); as resourcesError) {
+        <app-text variant="small" color="danger">{{ resourcesError }}</app-text>
+      }
+    </app-column>
+
+    <app-column [gap]="6">
+      <app-text variant="small" weight="medium">Réseau</app-text>
+      <app-choice-cards label="Réseau" [columns]="2" [options]="networks()" [(value)]="network" />
+    </app-column>
+
+    <app-column [gap]="6">
+      <app-text variant="small" weight="medium">Firmware</app-text>
+      <app-text variant="small" color="muted">Il doit correspondre à celui utilisé pour construire le template (BIOS en général).</app-text>
+      <app-choice-cards label="Firmware" [columns]="2" [options]="firmwares()" [(value)]="firmware" />
+    </app-column>
+
+    <app-column [gap]="6">
+      <app-text variant="small" weight="medium">Démarrer après la création</app-text>
+      <app-choice-cards label="Démarrer après la création" [columns]="2" [options]="startChoices" [(value)]="start" />
+    </app-column>
+
+    @if (auth.isAdmin()) {
+      <app-column [gap]="6">
+        <app-text variant="small" weight="medium">Propriétaire (facultatif)</app-text>
+        <app-text variant="small" color="muted">Sans choix, la VM vous appartient. Le quota du propriétaire s'applique.</app-text>
+        <app-user-picker label="Propriétaire" [(value)]="ownerId" />
+      </app-column>
+    }
+  </app-column>
+
+  <app-row footer [gap]="8">
+    <app-button variant="ghost" (pressed)="modalRef.close()">Annuler</app-button>
+    <app-button (pressed)="submit()">Créer</app-button>
+  </app-row>
+</app-modal-shell>

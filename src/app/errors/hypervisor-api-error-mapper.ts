@@ -79,6 +79,32 @@ function quotaMessage(content: string | undefined): string | null {
   return `Limite atteinte pour le ${label} : ${max} au maximum${requested ? ` (${requested} demandé${Number(requested) > 1 ? 's' : ''})` : ''}. Un administrateur peut augmenter votre quota.`;
 }
 
+/**
+ * Les templates ont plusieurs raisons très différentes de répondre 409 (ou 400) : le texte générique
+ * du catalogue n'aiderait pas. On reconnaît le message anglais de l'API (templates.rs) et on affiche
+ * le texte français qui lui correspond. Le premier motif qui correspond l'emporte.
+ */
+const TEMPLATE_MESSAGES: { pattern: RegExp; message: string }[] = [
+  { pattern: /template with this name already exists/i, message: 'Un template porte déjà ce nom sur cet hyperviseur.' },
+  { pattern: /template is being built: stop/i, message: "Le template est en construction : arrêtez d'abord la construction pour le supprimer." },
+  { pattern: /version is being built: stop/i, message: "Cette version est en construction : arrêtez d'abord la construction pour la supprimer." },
+  { pattern: /build of this template is already running/i, message: 'Une construction de ce template est déjà en cours : attendez sa fin ou arrêtez-la.' },
+  { pattern: /No build of this template is running/i, message: "Aucune construction de ce template n'est en cours (elle vient sans doute de se terminer)." },
+  { pattern: /no built version yet/i, message: "Le template n'a encore aucune version prête : attendez la fin de sa construction." },
+  { pattern: /version of the template is not built/i, message: "Cette version du template n'est pas prête." },
+  { pattern: /Invalid offset/i, message: 'Le journal a changé : rechargez-le depuis le début.' },
+  { pattern: /disk of the template is in use/i, message: "Le disque du template est en cours d'utilisation (une VM est en train d'être créée à partir de lui). Réessayez dans un instant." },
+  { pattern: /disk of the template is missing/i, message: "Le disque du template a disparu de son pool : un administrateur doit le reconstruire." },
+  { pattern: /VM with this name already exists/i, message: 'Une VM porte déjà ce nom sur cet hyperviseur.' },
+  { pattern: /volume named .* already exists/i, message: 'Un disque de ce nom existe déjà dans le pool : choisissez un autre nom.' },
+  { pattern: /network is not active/i, message: "Le réseau choisi n'est pas démarré sur l'hyperviseur." },
+  { pattern: /storage pool .* is not active/i, message: "Le pool de stockage n'est pas démarré sur l'hyperviseur." },
+  { pattern: /need a local or qemu\+ssh/i, message: 'Les templates demandent un hyperviseur local ou en qemu+ssh:// : Packer est lancé par SSH.' },
+  { pattern: /^disk_name/i, message: 'Le nom du fichier disque doit faire de 1 à 64 caractères : lettres, chiffres, « - », « _ » ou « . » (pas au début).' },
+  { pattern: /^packer_config/i, message: 'La configuration Packer est vide ou trop longue (64 Ko au maximum).' },
+  { pattern: /^Invalid pool/i, message: 'Le nom du pool est invalide.' },
+];
+
 /** L'API répond { status, content } en cas d'erreur (voir common.rs). */
 function asApiMessage(body: unknown): ApiMessage | null {
   if (typeof body === 'object' && body !== null && 'status' in body && 'content' in body) {
@@ -128,6 +154,12 @@ export class HypervisorApiErrorMapper implements ErrorMapper {
   private messageFor(code: BusinessErrorCode, origin: ErrorOrigin, body: ApiMessage | null): string {
     if (code === 'QUOTA_EXCEEDED') {
       return quotaMessage(body?.content) ?? CATALOG[code].message;
+    }
+    if ((code === 'CONFLICT' || code === 'INVALID_REQUEST') && origin.endpoint.includes('/templates')) {
+      const found = TEMPLATE_MESSAGES.find((entry) => entry.pattern.test(body?.content ?? ''));
+      if (found) {
+        return found.message;
+      }
     }
     if (code === 'INVALID_CREDENTIALS' && origin.endpoint.startsWith('/api/me/password')) {
       return 'Le mot de passe actuel est incorrect.';

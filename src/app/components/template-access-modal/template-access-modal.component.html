@@ -1,0 +1,20 @@
+<app-modal-shell
+  title="Donner l'accès au template"
+  subtitle="L'utilisateur pourra créer des VM à partir de ce template, s'il a aussi l'accès à l'hyperviseur."
+  [state]="state()"
+  [error]="error()"
+  loadingLabel="Enregistrement…"
+  successMessage="Accès accordé."
+  (retry)="state.set('form')"
+  (done)="modalRef.close(true)"
+>
+  <app-user-picker label="Utilisateur" [includeAdmins]="false" [exclude]="alreadyGranted()" [(value)]="userId" />
+  @if (userError(); as message) {
+    <app-text variant="small" color="danger">{{ message }}</app-text>
+  }
+
+  <app-row footer [gap]="8">
+    <app-button variant="ghost" (pressed)="modalRef.close()">Annuler</app-button>
+    <app-button (pressed)="submit()">Accorder l'accès</app-button>
+  </app-row>
+</app-modal-shell>

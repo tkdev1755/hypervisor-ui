@@ -1,0 +1,58 @@
+<app-modal-shell
+  [title]="editing() ? 'Modifier « ' + template()?.name + ' »' : 'Créer un template'"
+  [subtitle]="'Sur ' + hypervisorName()"
+  [state]="state()"
+  [error]="error()"
+  [loadingLabel]="loadingLabel()"
+  [successMessage]="
+    editing()
+      ? 'Modifications enregistrées. Les versions déjà construites ne changent pas : reconstruisez le template pour les appliquer.'
+      : 'Construction lancée. Elle prend en général 3 à 10 minutes : la liste des templates suit son avancement.'
+  "
+  (retry)="retry()"
+  (done)="modalRef.close(result() ?? undefined)"
+>
+  <app-column [gap]="16">
+    <app-callout type="warning" title="Réservé aux administrateurs">
+      Packer exécute les commandes de la configuration sur la machine qui construit (l'hyperviseur en SSH, ou l'hôte de l'API).
+      Cette machine a besoin de packer, qemu-img, virsh et d'un accès à Internet.
+    </app-callout>
+
+    @if (editing()) {
+      <app-callout title="Les versions existantes ne changent pas">
+        La nouvelle définition servira à la prochaine construction (bouton « Reconstruire » de la page du template).
+      </app-callout>
+    }
+
+    <app-text-field label="Nom du template" placeholder="debian-12" [(value)]="name" [error]="nameError()" hint="Chaque version est rangée dans le pool sous le nom template-&lt;nom&gt;-v&lt;version&gt;.qcow2." />
+
+    <app-column [gap]="6">
+      <app-row [gap]="8">
+        <app-text variant="small" weight="medium">Configuration Packer (HCL2 ou JSON)</app-text>
+        <app-spacer />
+        @if (!editing()) {
+          <app-button variant="ghost" size="sm" icon="bulb" (pressed)="useExample()">Exemple Debian 12</app-button>
+        }
+      </app-row>
+      <app-text-field [rows]="14" [monospace]="true" placeholder='source "qemu" "debian" { … }' [(value)]="packerConfig" [error]="configError()" />
+    </app-column>
+
+    <app-text-field label="Fichier disque produit (facultatif)" placeholder="debian-12.qcow2" [monospace]="true" [(value)]="diskName" [error]="diskNameError()" [hint]="diskNameHint()" />
+
+    <app-column [gap]="6">
+      <app-text variant="small" weight="medium">Pool qui recevra le disque</app-text>
+      <app-choice-cards label="Pool" [columns]="2" [options]="pools()" [(value)]="pool" />
+    </app-column>
+
+    <app-column [gap]="6">
+      <app-text variant="small" weight="medium">Qui peut l'utiliser</app-text>
+      <app-text variant="small" color="muted">Les administrateurs le peuvent toujours. En mode restreint, choisissez les utilisateurs dans l'onglet « Accès » de la page du template.</app-text>
+      <app-choice-cards label="Qui peut l'utiliser" [columns]="2" [options]="visibilityChoices" [(value)]="visibility" />
+    </app-column>
+  </app-column>
+
+  <app-row footer [gap]="8">
+    <app-button variant="ghost" (pressed)="modalRef.close()">Annuler</app-button>
+    <app-button (pressed)="submit()">{{ editing() ? 'Enregistrer' : 'Lancer la construction' }}</app-button>
+  </app-row>
+</app-modal-shell>
