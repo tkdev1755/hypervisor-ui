@@ -201,7 +201,10 @@ mainteneur a conçue en entreprise. Respectez leur contrat.
   Asynchrone partout : la liste se recharge toutes les 5 s et la page toutes les 3 s pendant une construction ;
   le journal se lit par morceaux (`offset` = `next_offset` précédent) toutes les 2 s ; la création de VM suit
   sa tâche (`JobService.watch`), depuis l'onglet Templates, la page du template (choix de la version) ou
-  « Créer une VM » (source « Template », dernière version prête). Les 409 ont des causes variées :
+  « Créer une VM » (source « Template », dernière version prête).
+  **Activer / désactiver** (`allow_vm_creation`, PATCH) : désactivé, l'API refuse toute création de VM
+  (409, admins compris) mais **liste encore** le template ; c'est le front qui le cache aux utilisateurs
+  (`template-list` → `visible()`, filtre de `vm-form-modal`). L'admin le voit avec la pastille « Désactivé ». Les 409 ont des causes variées :
   leur texte français vient de `TEMPLATE_MESSAGES` dans le mapper. Ne lancez **aucune** construction sur la
   vraie API sans accord (elle installe un OS sur l'hyperviseur) : `npm run mock:full` la simule.
 - La suppression de réseau est **masquée** (la vraie API n'a pas de `DELETE …/networks/{id}`) :

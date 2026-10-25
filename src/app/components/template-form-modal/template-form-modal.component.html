@@ -49,6 +49,15 @@
       <app-text variant="small" color="muted">Les administrateurs le peuvent toujours. En mode restreint, choisissez les utilisateurs dans l'onglet « Accès » de la page du template.</app-text>
       <app-choice-cards label="Qui peut l'utiliser" [columns]="2" [options]="visibilityChoices" [(value)]="visibility" />
     </app-column>
+
+    <app-column [gap]="6">
+      <app-text variant="small" weight="medium">État</app-text>
+      <app-text variant="small" color="muted">
+        Désactivé, le template n'est plus proposé aux utilisateurs et personne (administrateurs compris) ne peut créer de VM à partir de lui.
+        Ses versions sont gardées : on peut le réactiver à tout moment.
+      </app-text>
+      <app-choice-cards label="État" [columns]="2" [options]="enabledChoices" [(value)]="enabled" />
+    </app-column>
   </app-column>
 
   <app-row footer [gap]="8">

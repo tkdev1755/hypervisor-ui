@@ -10,7 +10,8 @@
 // TEMPLATES (mode full) : chaque construction crée une version. Une « construction Packer » dure
 //   ~12 s (2 s en attente, puis un journal qui se remplit chaque seconde). Une configuration qui
 //   contient le mot « fail » échoue, pour voir l'affichage de l'erreur. « debian-12 » a deux versions
-//   prêtes ; « ubuntu-24 » est restreint (alice y a accès) et sa version 2 a raté.
+//   prêtes ; « ubuntu-24 » est restreint (alice y a accès) et sa version 2 a raté ; « alpine-3 » est
+//   désactivé (allow_vm_creation: false) : listé quand même, mais toute création de VM répond 409.
 //
 // Mêmes routes, même port (3000) et même format d'erreur { status, content }
 // que l'API Rust. Les données sont en mémoire : elles disparaissent à l'arrêt.
@@ -91,11 +92,11 @@ access.get(local.id).set(alice.id, now());
 addVm(local.id, 'web-01', 4096, 2, 'running', alice);
 addVm(local.id, 'db-01', 8192, 4, 'stopped', null); // créée « hors de l'API » : sans propriétaire
 const bobVm = addVm(local.id, 'bob-vm', 2048, 1, 'stopped', bob);
-function addTemplate(hypervisorId, name, visibility, versionStates) {
+function addTemplate(hypervisorId, name, visibility, versionStates, allowVmCreation = true) {
   const config = `source "qemu" "${name}" {\n  vm_name = "${name}.qcow2"\n}\n`;
   const template = {
     id: randomUUID(), hypervisor_id: hypervisorId, name, packer_config: config, disk_name: `${name}.qcow2`, pool: 'default',
-    visibility, created_at: now() - 86400, updated_at: now() - 86400, versions: [], access: new Map(),
+    visibility, allow_vm_creation: allowVmCreation, created_at: now() - 86400, updated_at: now() - 86400, versions: [], access: new Map(),
   };
   versionStates.forEach((status, index) => {
     template.versions.push({
@@ -111,6 +112,7 @@ function addTemplate(hypervisorId, name, visibility, versionStates) {
 }
 addTemplate(local.id, 'debian-12', 'hypervisor', ['created', 'created']);
 addTemplate(local.id, 'ubuntu-24', 'restricted', ['created', 'failed']).access.set(alice.id, now());
+addTemplate(local.id, 'alpine-3', 'hypervisor', ['created'], false);
 bobVm.shares.push({ user_id: alice.id, username: 'alice', created_at: now(), expires_at: null });
 
 // --- Réponses ---------------------------------------------------------------
@@ -711,6 +713,7 @@ function templateProblem(definition) {
   if (!NAME_PATTERN.test(definition.disk_name ?? '')) return "disk_name must be the file name of the disk Packer writes: 1-64 characters, letters, digits, '-', '_' or '.' (not leading)";
   if (!String(definition.packer_config ?? '').trim()) return 'packer_config must be a non-empty text of at most 65536 bytes';
   if (definition.visibility && !['hypervisor', 'restricted'].includes(definition.visibility)) return 'Invalid visibility';
+  if (definition.allow_vm_creation !== undefined && typeof definition.allow_vm_creation !== 'boolean') return 'Failed to deserialize the JSON body';
   return null;
 }
 
@@ -731,7 +734,7 @@ async function handleTemplates(req, res, { id, subId, action, extra, method, url
     if (list.some((t) => t.name === body.name)) return err(res, 409, 'A template with this name already exists on this hypervisor');
     const template = {
       id: randomUUID(), hypervisor_id: id, name: body.name, packer_config: body.packer_config, disk_name: body.disk_name,
-      pool: body.pool ?? 'default', visibility: body.visibility ?? 'hypervisor', created_at: now(), updated_at: now(), versions: [], access: new Map(),
+      pool: body.pool ?? 'default', visibility: body.visibility ?? 'hypervisor', allow_vm_creation: body.allow_vm_creation ?? true, created_at: now(), updated_at: now(), versions: [], access: new Map(),
     };
     list.push(template);
     logAudit(user, 'template.create', `${id}/${template.id}`, body.name);
@@ -752,6 +755,7 @@ async function handleTemplates(req, res, { id, subId, action, extra, method, url
       const next = {
         name: body.name ?? template.name, packer_config: body.packer_config ?? template.packer_config,
         disk_name: body.disk_name ?? template.disk_name, pool: body.pool ?? template.pool, visibility: body.visibility ?? template.visibility,
+        allow_vm_creation: body.allow_vm_creation ?? template.allow_vm_creation,
       };
       const problem = templateProblem(next);
       if (problem) return err(res, 400, problem);
@@ -837,6 +841,8 @@ async function handleTemplates(req, res, { id, subId, action, extra, method, url
   if (action === 'vms' && method === 'POST') {
     const body = await readJson(req);
     if (!body?.name || !Number.isInteger(body.memory_mb) || !Number.isInteger(body.vcpus)) return malformed(res);
+    // Comme l'API : un template désactivé est refusé à tout le monde, administrateurs compris.
+    if (!template.allow_vm_creation) return err(res, 409, 'Creating VMs from this template is disabled');
     const built = builtVersions(template);
     let version;
     if (body.version !== undefined && body.version !== null) {

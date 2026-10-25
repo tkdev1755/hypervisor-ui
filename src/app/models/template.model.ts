@@ -54,6 +54,11 @@ export interface Template {
   /** Le pool qui reçoit les disques construits. */
   pool: string;
   visibility: TemplateVisibility;
+  /**
+   * Le template est-il activé ? Désactivé (false), PERSONNE ne peut créer de VM à partir de lui,
+   * administrateurs compris (409). L'API le liste quand même : c'est l'interface qui le cache aux utilisateurs.
+   */
+  allow_vm_creation: boolean;
   /** L'état de la dernière version (pour un utilisateur : de la dernière version prête). */
   status?: TemplateStatus | null;
   /** La version utilisée par défaut pour créer une VM : la dernière prête ; null s'il n'y en a aucune. */
@@ -72,6 +77,8 @@ export interface CreateTemplate {
   pool?: string;
   /** Par défaut : 'hypervisor'. */
   visibility?: TemplateVisibility;
+  /** Activer le template, c'est-à-dire autoriser la création de VM (par défaut : true). */
+  allow_vm_creation?: boolean;
 }
 
 /** Ce qu'on envoie pour modifier un template : les champs absents gardent leur valeur. Reconstruire pour l'appliquer. */

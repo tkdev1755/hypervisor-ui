@@ -10,9 +10,12 @@
       <app-status-badge actions [status]="status" />
     }
     <ng-container actions>
-      @if (template.default_version) {
+      @if (template.default_version && template.allow_vm_creation) {
         <app-button icon="plus" (pressed)="createVm(template)">Créer une VM</app-button>
       }
+      <app-button variant="ghost" [icon]="template.allow_vm_creation ? 'stop' : 'play'" [loading]="toggling()" (pressed)="toggle(template)">
+        {{ template.allow_vm_creation ? 'Désactiver' : 'Activer' }}
+      </app-button>
       @if (building()) {
         <app-button variant="danger-ghost" icon="stop" (pressed)="stop(template)">{{ stopping() ? 'Forcer l’arrêt' : 'Arrêter la construction' }}</app-button>
       } @else {
@@ -26,6 +29,17 @@
 
     @if (error(); as error) {
       <app-error-panel [error]="error" [retryable]="true" (retry)="load()" />
+    }
+
+    @if (actionError(); as actionError) {
+      <app-error-panel [error]="actionError" />
+    }
+
+    @if (!template.allow_vm_creation) {
+      <app-callout type="warning" title="Template désactivé">
+        Les utilisateurs ne le voient plus et personne, administrateurs compris, ne peut créer de VM à partir de lui.
+        Les VM déjà créées ne sont pas touchées. « Activer » le rend de nouveau disponible.
+      </app-callout>
     }
 
     @if (outdated() && !building()) {
@@ -66,7 +80,7 @@
             @for (version of versions(); track version.version) {
               <app-list-tile icon="layers" [title]="'Version ' + version.version" [subtitle]="versionSubtitle(version)" [status]="version.status">
                 <app-button variant="ghost" size="sm" icon="terminal" (pressed)="logs(template, version)">Journal</app-button>
-                @if (version.status === 'created') {
+                @if (version.status === 'created' && template.allow_vm_creation) {
                   <app-button variant="ghost" size="sm" icon="plus" (pressed)="createVm(template, version)">Créer une VM</app-button>
                 }
                 @if (!isBuilding(version)) {

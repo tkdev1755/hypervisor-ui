@@ -303,8 +303,8 @@ export class VmFormModalComponent implements OnInit {
       templates: this.templateService.list(this.hypervisorId()).pipe(catchError(() => of([] as Template[]))),
     }).subscribe({
       next: ({ options, templates }) => {
-        // Un template est utilisable s'il a une version prête (même si une reconstruction est en cours).
-        const ready = templates.filter((t) => t.default_version !== null && t.default_version !== undefined);
+        // Un template est utilisable s'il est activé et a une version prête (même si une reconstruction est en cours).
+        const ready = templates.filter((t) => t.allow_vm_creation && t.default_version !== null && t.default_version !== undefined);
         this.templates.set(ready);
         this.templateId.set(ready[0]?.id);
         this.options.set(options);

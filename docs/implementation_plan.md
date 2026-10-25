@@ -125,6 +125,10 @@ construite par Packer en arrière-plan, puis copiée pour chaque VM créée à p
       formulaire sert aussi à la modification), Supprimer ; rappel quand la définition a changé depuis la
       dernière version. `template-log-modal` suit le journal en direct ; `app-code-block` gagne `maxHeight`
       et `followEnd`. L'ancienne `template-detail-modal` est supprimée.
+- [x] Activer / désactiver un template (`allow_vm_creation`, migration `0004`) : bouton sur la carte et sur
+      la page, choix dans le formulaire, pastille « Désactivé », encadré sur la page. Désactivé : caché aux
+      utilisateurs (onglet Templates et « Créer une VM »), plus de « Créer une VM » pour personne.
+      L'API liste encore un template désactivé : le masquage n'est fait que par l'interface.
 - [ ] **Non testé** contre une vraie construction Packer (la vraie API du port 3000 n'a reçu que des `GET`).
 
 ### Documentation
@@ -254,3 +258,4 @@ un 409 affiche un message métier clair.
 | 24 octobre 2026 | `main` (abdellatif212) fusionné dans `auth` : récapitulatif et filtres des VM, suivi de l'arrêt, modes de disque (nouveau / existant / aucun). Corrigés au passage : polling borné à 1 minute, statut `shutting_down`, nom de VM sans point initial, commentaires pédagogiques restaurés, fausse API en `stopped`. |
 | 25 octobre 2026 | Templates Packer : onglet « Templates », construction (admin), création de VM depuis un template, fausse API. |
 | 25 octobre 2026 | Templates : versions, reconstruction, arrêt, journal en direct, accès restreint (nouveau contrat de l'API). |
+| 25 octobre 2026 | Templates : activation / désactivation (`allow_vm_creation`), masqués aux utilisateurs quand désactivés. |

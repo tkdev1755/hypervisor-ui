@@ -90,6 +90,7 @@ const TEMPLATE_MESSAGES: { pattern: RegExp; message: string }[] = [
   { pattern: /version is being built: stop/i, message: "Cette version est en construction : arrêtez d'abord la construction pour la supprimer." },
   { pattern: /build of this template is already running/i, message: 'Une construction de ce template est déjà en cours : attendez sa fin ou arrêtez-la.' },
   { pattern: /No build of this template is running/i, message: "Aucune construction de ce template n'est en cours (elle vient sans doute de se terminer)." },
+  { pattern: /Creating VMs from this template is disabled/i, message: "Ce template est désactivé : un administrateur doit l'activer pour qu'on puisse créer des VM à partir de lui." },
   { pattern: /no built version yet/i, message: "Le template n'a encore aucune version prête : attendez la fin de sa construction." },
   { pattern: /version of the template is not built/i, message: "Cette version du template n'est pas prête." },
   { pattern: /Invalid offset/i, message: 'Le journal a changé : rechargez-le depuis le début.' },

@@ -43,7 +43,8 @@ type Onglet = 'versions' | 'config' | 'access';
  *  - Configuration : la définition actuelle (configuration Packer, disque, pool, visibilité).
  *  - Accès : les utilisateurs autorisés quand le template est restreint.
  *
- * En haut : Reconstruire (nouvelle version à partir de la définition actuelle), Arrêter la
+ * En haut : Activer / Désactiver (désactivé : plus aucune VM à partir de lui, et les utilisateurs ne le
+ * voient plus), Reconstruire (nouvelle version à partir de la définition actuelle), Arrêter la
  * construction (puis Forcer l'arrêt si Packer tarde à faire le ménage), Modifier et Supprimer.
  */
 @Component({
@@ -83,6 +84,9 @@ export class TemplateDetailComponent implements OnInit, OnDestroy {
   protected readonly template = signal<Template | null>(null);
   protected readonly versions = signal<TemplateVersion[]>([]);
   protected readonly error = signal<AppError | null>(null);
+  protected readonly actionError = signal<AppError | null>(null);
+  /** Une activation / désactivation est en cours (chargement du bouton). */
+  protected readonly toggling = signal(false);
 
   protected readonly onglets: Tab<Onglet>[] = [
     { id: 'versions', label: 'Versions', icon: 'layers' },
@@ -167,6 +171,22 @@ export class TemplateDetailComponent implements OnInit, OnDestroy {
   }
 
   // ---------- actions sur le template ----------
+
+  /** Activer ou désactiver (PATCH allow_vm_creation), sans confirmation : c'est réversible. */
+  protected toggle(template: Template): void {
+    this.toggling.set(true);
+    this.actionError.set(null);
+    this.templates.update(this.id(), template.id, { allow_vm_creation: !template.allow_vm_creation }).subscribe({
+      next: (updated) => {
+        this.template.set(updated);
+        this.toggling.set(false);
+      },
+      error: (error: AppError) => {
+        this.actionError.set(error);
+        this.toggling.set(false);
+      },
+    });
+  }
 
   protected rebuild(template: Template): void {
     const next = (template.latest_version?.version ?? 0) + 1;

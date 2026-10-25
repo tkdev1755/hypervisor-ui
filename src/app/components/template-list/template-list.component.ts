@@ -31,6 +31,10 @@ import { TemplateService } from '@app/services/template.service';
  *  - Un utilisateur qui a l'accès à l'hyperviseur ne voit que les templates prêts qui lui sont
  *    ouverts, et crée des VM à partir d'eux. Sans cet accès, l'API répond 403 : on l'explique.
  *
+ * Un template DÉSACTIVÉ (`allow_vm_creation: false`) ne permet plus de créer de VM, même à un admin.
+ * L'API le liste quand même : on le cache ici aux utilisateurs, l'admin le voit marqué « désactivé »
+ * et peut le réactiver depuis la carte.
+ *
  * Chaque carte montre l'état de la DERNIÈRE version. Pendant une reconstruction, on peut toujours
  * créer des VM : elles partent de la dernière version prête (`default_version`).
  * Une construction dure plusieurs minutes : tant qu'il y en a une, la liste est rechargée toutes
@@ -55,6 +59,15 @@ export class TemplateListComponent implements OnInit, OnDestroy {
   protected readonly list = signal<Template[]>([]);
   protected readonly loading = signal(true);
   protected readonly error = signal<AppError | null>(null);
+  /** L'erreur d'une activation / désactivation (affichée sous la grille). */
+  protected readonly actionError = signal<AppError | null>(null);
+  /** L'id du template en cours d'activation / désactivation (pour afficher son chargement). */
+  protected readonly busyId = signal<string | null>(null);
+
+  /** Ce qu'on affiche : tout pour un admin ; pour un utilisateur, seulement les templates activés. */
+  protected readonly visible = computed(() =>
+    this.auth.isAdmin() ? this.list() : this.list().filter((template) => template.allow_vm_creation),
+  );
   /** 403 : l'utilisateur n'a pas l'accès à cet hyperviseur (il y voit seulement une VM prêtée). */
   protected readonly noAccess = computed(() => this.error()?.kind === 'business' && this.error()?.status === 403);
 
@@ -103,9 +116,9 @@ export class TemplateListComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Peut-on créer une VM ? Il faut au moins une version prête. */
+  /** Peut-on créer une VM ? Il faut que le template soit activé et ait au moins une version prête. */
   protected canCreateVm(template: Template): boolean {
-    return template.default_version !== null && template.default_version !== undefined;
+    return template.allow_vm_creation && template.default_version !== null && template.default_version !== undefined;
   }
 
   /** La ligne d'information de la carte, d'après la dernière version. */
@@ -127,9 +140,40 @@ export class TemplateListComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Le sous-titre : le pool, et « restreint » si seuls certains utilisateurs y ont accès. */
+  /** Le sous-titre : le pool, puis « restreint » et « désactivé » si c'est le cas. */
   protected subtitle(template: Template): string {
-    return template.visibility === 'restricted' ? `pool ${template.pool} · accès restreint` : `pool ${template.pool}`;
+    const parts = [`pool ${template.pool}`];
+    if (template.visibility === 'restricted') {
+      parts.push('accès restreint');
+    }
+    if (!template.allow_vm_creation) {
+      parts.push('désactivé');
+    }
+    return parts.join(' · ');
+  }
+
+  /** La pastille : l'état de la dernière version, ou « Désactivé » (une construction en cours reste affichée). */
+  protected badge(template: Template): string | undefined {
+    if (!template.allow_vm_creation && !isBuilding(template.status)) {
+      return 'disabled';
+    }
+    return template.status ?? undefined;
+  }
+
+  /** Admin : activer ou désactiver le template (PATCH allow_vm_creation), sans confirmation : c'est réversible. */
+  protected toggle(template: Template): void {
+    this.busyId.set(template.id);
+    this.actionError.set(null);
+    this.templates.update(this.hypervisorId(), template.id, { allow_vm_creation: !template.allow_vm_creation }).subscribe({
+      next: (updated) => {
+        this.list.update((templates) => templates.map((t) => (t.id === updated.id ? updated : t)));
+        this.busyId.set(null);
+      },
+      error: (error: AppError) => {
+        this.actionError.set(error);
+        this.busyId.set(null);
+      },
+    });
   }
 
   /** Admin : la page du template (versions, journal, configuration, accès). */

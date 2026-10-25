@@ -20,12 +20,12 @@
     <app-error-panel [error]="error" [retryable]="true" (retry)="load()" />
   } @else {
     <app-grid [minItemWidth]="260">
-      @for (template of list(); track template.id) {
+      @for (template of visible(); track template.id) {
         <app-resource-card
           icon="layers"
           [title]="template.name"
           [subtitle]="subtitle(template)"
-          [status]="template.status ?? undefined"
+          [status]="badge(template)"
           [meta]="meta(template)"
           [clickable]="auth.isAdmin()"
           (tap)="open(template)"
@@ -35,6 +35,15 @@
           }
           @if (auth.isAdmin()) {
             <app-button variant="ghost" size="sm" icon="edit" (pressed)="open(template)">Gérer</app-button>
+            <app-button
+              variant="ghost"
+              size="sm"
+              [icon]="template.allow_vm_creation ? 'stop' : 'play'"
+              [loading]="busyId() === template.id"
+              (pressed)="toggle(template)"
+            >
+              {{ template.allow_vm_creation ? 'Désactiver' : 'Activer' }}
+            </app-button>
           }
         </app-resource-card>
       } @empty {
@@ -47,5 +56,9 @@
         }
       }
     </app-grid>
+  }
+
+  @if (actionError(); as actionError) {
+    <app-error-panel [error]="actionError" />
   }
 </app-column>

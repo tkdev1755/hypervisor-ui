@@ -22,7 +22,8 @@ const MAX_CONFIG_BYTES = 64 * 1024;
 
 /**
  * Créer ou modifier un template (admin seulement) : un nom, une configuration Packer, le nom du
- * fichier disque qu'elle produit, le pool qui recevra les disques, et qui peut l'utiliser.
+ * fichier disque qu'elle produit, le pool qui recevra les disques, qui peut l'utiliser, et s'il est
+ * activé (désactivé : personne ne peut créer de VM à partir de lui, et les utilisateurs ne le voient plus).
  *
  * - Sans `template` : création. L'API répond tout de suite (202) et construit la version 1 en
  *   arrière-plan ; la liste des templates suit son avancement.
@@ -56,6 +57,12 @@ export class TemplateFormModalComponent implements OnInit {
   protected readonly diskName = signal('');
   protected readonly pool = signal<string | undefined>(undefined);
   protected readonly visibility = signal<TemplateVisibility>('hypervisor');
+  protected readonly enabled = signal(true);
+
+  protected readonly enabledChoices: Choice<boolean>[] = [
+    { value: true, label: 'Activé', description: 'On peut créer des VM à partir de lui' },
+    { value: false, label: 'Désactivé', description: 'Caché aux utilisateurs, aucune VM' },
+  ];
 
   protected readonly visibilityChoices: Choice<TemplateVisibility>[] = [
     { value: 'hypervisor', label: "Tous ceux qui ont l'accès", description: "à l'hyperviseur" },
@@ -120,6 +127,7 @@ export class TemplateFormModalComponent implements OnInit {
       this.packerConfig.set(template.packer_config ?? '');
       this.diskName.set(template.disk_name);
       this.visibility.set(template.visibility);
+      this.enabled.set(template.allow_vm_creation);
     }
     this.loadPools();
   }
@@ -171,6 +179,7 @@ export class TemplateFormModalComponent implements OnInit {
       disk_name: this.finalDiskName(),
       pool: this.pool(),
       visibility: this.visibility(),
+      allow_vm_creation: this.enabled(),
     };
     const template = this.template();
     this.loadingLabel.set(template ? 'Enregistrement…' : 'Lancement de la construction…');

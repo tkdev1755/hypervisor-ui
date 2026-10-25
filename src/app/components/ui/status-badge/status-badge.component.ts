@@ -21,6 +21,7 @@ const STATUSES: Record<string, { label: string; tone: Tone }> = {
   created: { label: 'Prêt', tone: 'success' },
   failed: { label: 'Échec', tone: 'danger' },
   cancelled: { label: 'Annulé', tone: 'neutral' },
+  disabled: { label: 'Désactivé', tone: 'neutral' },
 };
 
 /**
